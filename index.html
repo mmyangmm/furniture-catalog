@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>傢俱目錄</title>
+<style>
+  :root {
+    --bg: #f7f5f2;
+    --surface: #ffffff;
+    --border: #e8e2d9;
+    --text: #2c2416;
+    --text-muted: #8a7d6b;
+    --accent: #8b6f47;
+    --accent-light: #f0e8dc;
+    --accent-hover: #6d5435;
+    --tag-bg: #ede7dd;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-hover: 0 8px 32px rgba(0,0,0,0.14);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --green: #2d8a4e;
+    --green-light: #e6f4ec;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', 'PingFang TC', 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+  }
+
+  .logo h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--text); }
+  .logo span { font-size: 13px; color: var(--text-muted); display: block; margin-top: 1px; }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    padding: 9px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
+
+  .btn-ai {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+  }
+  .btn-ai:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: var(--shadow); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s;
+  }
+  .btn-icon:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+  /* Search bar */
+  .search-bar {
+    padding: 20px 40px 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+  }
+
+  .search-input-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* Filter sidebar */
+  .filter-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .filter-backdrop.open { display: block; opacity: 1; }
+
+  .filter-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 240px;
+    background: var(--surface);
+    z-index: 201;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+  }
+  .filter-sidebar.open { transform: translateX(0); }
+
+  .filter-sidebar-header {
+    padding: 20px 20px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-sidebar-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 20px;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .filter-sidebar-close:hover { color: var(--text); }
+
+  .filter-sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 12px;
+  }
+
+  .filter-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 0 8px;
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .filter-section-label:first-child { margin-top: 0; }
+
+  .cat-tab {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .cat-tab:hover { background: var(--accent-light); color: var(--accent); }
+  .cat-tab.active { background: var(--accent); color: white; }
+
+  /* Filter toggle button in search bar */
+  .filter-toggle-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+  }
+  .filter-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-toggle-btn.has-filter { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  /* Stats bar */
+  .stats-bar {
+    padding: 16px 40px 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .stats-count { font-size: 13px; color: var(--text-muted); }
+  .stats-count strong { color: var(--accent); font-size: 15px; }
+
+  .sort-select {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    cursor: pointer;
+    outline: none;
+    margin-left: auto;
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    padding: 20px 40px 60px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: all 0.22s;
+    cursor: pointer;
+    position: relative;
+  }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-3px); border-color: transparent; }
+
+  .card-img-wrap {
+    width: 100%;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+  }
+
+  .card-img-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    transition: transform 0.3s;
+  }
+  .card:hover .card-img-wrap img { transform: scale(1.04); }
+
+  .card-no-img {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    opacity: 0.5;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .card-type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.92);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(4px);
+  }
+
+  .card-actions-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.18s;
+  }
+  .card:hover .card-actions-overlay { opacity: 1; }
+
+  .card-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.18s;
+    backdrop-filter: blur(4px);
+  }
+  .card-action-btn:hover { background: white; }
+  .card-action-btn.delete:hover { background: #fee2e2; }
+
+  .card-body { padding: 16px; }
+  .card-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+  .card-brand { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+  .card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+  .meta-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--tag-bg);
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+
+  .card-price { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .card-year { font-size: 12px; color: var(--text-muted); background: var(--tag-bg); padding: 3px 9px; border-radius: 20px; }
+
+  /* Empty state */
+  .empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .empty-state svg { opacity: 0.3; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 20px; margin-bottom: 8px; color: var(--text); opacity: 0.5; }
+  .empty-state p { font-size: 14px; margin-bottom: 24px; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.22s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-header {
+    padding: 24px 28px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .modal-title { font-size: 18px; font-weight: 700; }
+
+  .modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--tag-bg);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: background 0.18s;
+  }
+  .modal-close:hover { background: var(--border); }
+
+  .modal-body { padding: 24px 28px 28px; }
+
+  /* Form */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .form-group:last-child { margin-bottom: 0; }
+
+  label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  input, select, textarea {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.18s;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* Image upload */
+  .img-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    overflow: hidden;
+  }
+  .img-upload-area:hover { border-color: var(--accent); background: var(--accent-light); }
+  .img-upload-area.has-image { padding: 0; border-style: solid; border-color: var(--accent); }
+
+  .img-upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+  }
+
+  .img-upload-preview { width: 100%; max-height: 240px; object-fit: cover; border-radius: calc(var(--radius-sm) - 2px); display: none; }
+  .img-upload-area.has-image .img-upload-preview { display: block; }
+  .img-upload-area.has-image .img-upload-placeholder { display: none; }
+
+  .img-upload-placeholder { color: var(--text-muted); font-size: 13px; }
+  .img-upload-placeholder svg { display: block; margin: 0 auto 8px; opacity: 0.5; }
+
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  /* Detail modal */
+  .detail-img { width: 100%; max-height: min(320px, 50vh); object-fit: contain; border-radius: var(--radius-sm); margin-bottom: 20px; background: var(--accent-light); }
+  .detail-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+  .detail-brand { font-size: 15px; color: var(--text-muted); margin-bottom: 16px; }
+  .detail-price { font-size: 28px; font-weight: 800; color: var(--accent); margin-bottom: 20px; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+
+  .detail-item { background: var(--tag-bg); border-radius: var(--radius-sm); padding: 12px; }
+  .detail-item-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .detail-item-value { font-size: 15px; font-weight: 600; color: var(--text); }
+
+  .detail-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 4px; }
+
+  /* ── Smart Search Modal ── */
+  .ai-modal { max-width: 600px; }
+
+  /* Step indicators */
+  .ai-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 28px;
+  }
+
+  .ai-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    position: relative;
+  }
+
+  .ai-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+    transition: background 0.3s;
+  }
+  .ai-step.done:not(:last-child)::after { background: var(--accent); }
+
+  .ai-step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    z-index: 1;
+    transition: all 0.3s;
+  }
+  .ai-step.active .ai-step-dot { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .ai-step.done .ai-step-dot { border-color: var(--accent); background: var(--accent); color: white; }
+
+  .ai-step-label { font-size: 11px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+  .ai-step.active .ai-step-label { color: var(--accent); font-weight: 700; }
+
+  /* Step panels */
+  .ai-panel { display: none; }
+  .ai-panel.active { display: block; }
+
+  /* Step 1: keyword input */
+  .ai-keyword-wrap { position: relative; margin-bottom: 12px; }
+  .ai-keyword-input {
+    width: 100%;
+    padding: 14px 52px 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.18s;
+    font-family: inherit;
+  }
+  .ai-keyword-input:focus { border-color: #764ba2; }
+  .ai-keyword-input::placeholder { color: var(--text-muted); }
+
+  .ai-search-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.18s;
+  }
+  .ai-search-btn:hover { opacity: 0.85; }
+
+  .ai-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .ai-examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ai-example-chip {
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--tag-bg);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .ai-example-chip:hover { border-color: #764ba2; color: #764ba2; background: #f3f0ff; }
+
+  /* Step 2: loading */
+  .ai-loading {
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .ai-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: #764ba2;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ai-loading-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .ai-loading-sub { font-size: 13px; color: var(--text-muted); }
+
+  .ai-loading-steps { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .ai-loading-step { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+  .ai-loading-step.done { color: var(--green); }
+  .ai-loading-step.current { color: var(--text); font-weight: 600; }
+
+  /* Step 3: confirm */
+  .ai-confirm-card {
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .ai-confirm-img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ai-confirm-img-placeholder {
+    height: 120px;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    opacity: 0.5;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .ai-confirm-body { padding: 20px; }
+
+  .ai-confirm-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ai-field-group { display: flex; flex-direction: column; gap: 4px; }
+  .ai-field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .ai-field-input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .ai-field-input:focus { border-color: var(--accent); }
+
+  .ai-field-select {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  .ai-field-select:focus { border-color: var(--accent); }
+
+  .ai-field-textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.15s;
+  }
+  .ai-field-textarea:focus { border-color: var(--accent); }
+
+  .ai-source-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--tag-bg);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.5;
+  }
+
+  .ai-error-box {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    color: #c53030;
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  /* API Key notice badge */
+  .api-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .api-badge.set { background: var(--green-light); color: var(--green); }
+  .api-badge.unset { background: #fff3cd; color: #92610a; }
+
+  /* Settings modal */
+  .settings-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .settings-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .settings-section-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .settings-section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    .search-bar, .stats-bar { padding-left: 16px; padding-right: 16px; }
+    .grid { padding: 16px; gap: 16px; grid-template-columns: 1fr 1fr; }
+    .form-row, .ai-confirm-row { grid-template-columns: 1fr; }
+    .modal-body { padding: 16px; }
+    .btn span { display: none; }
+  }
+  @media (max-width: 400px) {
+    .grid { grid-template-columns: 1fr; }
+    .logo h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛋</div>
+    <div>
+      <h1>傢俱目錄</h1>
+      <span>我的收藏清單</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ai" onclick="openAiSearchModal()">
+      🔗 <span>網址新增</span>
+    </button>
+    <button class="btn btn-primary" onclick="openAddModal()">
+      + <span>手動新增</span>
+    </button>
+    <button class="btn-icon" onclick="openSettings()" title="設定">⚙️</button>
+  </div>
+</header>
+
+<!-- Filter Backdrop -->
+<div class="filter-backdrop" id="filterBackdrop" onclick="closeFilterSidebar()"></div>
+
+<!-- Filter Sidebar -->
+<div class="filter-sidebar" id="filterSidebar">
+  <div class="filter-sidebar-header">
+    篩選
+    <button class="filter-sidebar-close" onclick="closeFilterSidebar()" title="關閉">×</button>
+  </div>
+  <div class="filter-sidebar-body">
+    <div class="filter-section-label">傢俱類型</div>
+    <div id="catTabs"></div>
+    <div id="brandSidebarSection" style="display:none">
+      <div class="filter-section-label" style="margin-top:20px">品牌</div>
+      <div id="brandTabs"></div>
+    </div>
+  </div>
+</div>
+
+<div class="search-bar">
+  <button class="filter-toggle-btn" id="filterToggleBtn" onclick="openFilterSidebar()" title="篩選分類">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+    <span id="filterToggleLabel">篩選</span>
+  </button>
+  <div class="search-input-wrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="search-input" id="searchInput" type="text" placeholder="搜尋品名、品牌、顏色…" oninput="renderCards()">
+  </div>
+  <select class="sort-select" id="sortSelect" onchange="renderCards()">
+    <option value="newest">最新新增</option>
+    <option value="price-asc">價格由低至高</option>
+    <option value="price-desc">價格由高至低</option>
+    <option value="year-desc">年份由新至舊</option>
+    <option value="name">品名排序</option>
+    <option value="brand">品牌排序</option>
+    <option value="type">類別排序</option>
+  </select>
+</div>
+
+<div class="stats-bar">
+  <div class="stats-count" id="statsCount"></div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<!-- ══════════════════════════════════════
+     Manual Add / Edit Modal
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="formModalTitle">新增傢俱品項</div>
+      <button class="modal-close" onclick="closeFormModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">產品圖片</div>
+        <div class="img-upload-area" id="imgUploadArea" onclick="handleImgClick(event)">
+          <input type="file" id="imgFileInput" accept="image/*" onchange="handleImgChange(event)">
+          <div class="img-upload-placeholder">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            點擊或拖曳上傳圖片<br><span style="font-size:11px;margin-top:4px;display:block">支援 JPG、PNG、WebP</span>
+          </div>
+          <img class="img-upload-preview" id="imgUploadPreview" src="" alt="預覽">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">基本資訊</div>
+        <div class="form-group">
+          <label>品名 *</label>
+          <input type="text" id="fName" placeholder="例：Eames Lounge Chair">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>品牌 *</label>
+            <input type="text" id="fBrand" placeholder="例：Herman Miller">
+          </div>
+          <div class="form-group">
+            <label>推出年份</label>
+            <input type="number" id="fYear" placeholder="例：2020" min="1800" max="2100">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">規格</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>顏色</label>
+            <input type="text" id="fColor" placeholder="例：黑色、深灰">
+          </div>
+          <div class="form-group">
+            <label>材質</label>
+            <input type="text" id="fMaterial" placeholder="例：胡桃木、皮革">
+          </div>
+          <div class="form-group">
+            <label>尺寸</label>
+            <input type="text" id="fSize" placeholder="例：W120 × D60 × H75 cm">
+          </div>
+          <div class="form-group">
+            <label>傢俱類型 *</label>
+            <select id="fType" onchange="handleTypeSelectChange('fType','fTypeCustom')">
+              <option value="">請選擇分類</option>
+              <option>沙發</option><option>椅子</option><option>桌子</option>
+              <option>床架</option><option>層架</option><option>收納</option><option>燈具</option>
+              <option>地毯</option><option>戶外傢俱</option><option>裝飾品</option>
+              <option>其他</option>
+              <option value="__custom__">＋ 自訂分類...</option>
+            </select>
+            <input type="text" id="fTypeCustom" placeholder="輸入新分類名稱，按 Enter 建立" style="display:none;margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px" onkeydown="handleCustomCatKey(event,'fType','fTypeCustom')">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>價格（NT$）</label>
+          <input type="number" id="fPrice" placeholder="例：58000" min="0">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">備註說明</div>
+        <div class="form-group">
+          <textarea id="fDesc" placeholder="產品描述、特色、購買管道等補充說明…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeFormModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveItem()">儲存品項</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     AI Smart Search Modal
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="aiModal">
+  <div class="modal ai-modal">
+    <div class="modal-header">
+      <div class="modal-title">🔗 網址新增</div>
+      <button class="modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Step indicators -->
+      <div class="ai-steps">
+        <div class="ai-step active" id="aiStep1Ind">
+          <div class="ai-step-dot">1</div>
+          <div class="ai-step-label">貼入網址</div>
+        </div>
+        <div class="ai-step" id="aiStep2Ind">
+          <div class="ai-step-dot">2</div>
+          <div class="ai-step-label">線上搜尋</div>
+        </div>
+        <div class="ai-step" id="aiStep3Ind">
+          <div class="ai-step-dot">3</div>
+          <div class="ai-step-label">確認儲存</div>
+        </div>
+      </div>
+
+      <!-- Panel 1: URL input -->
+      <div class="ai-panel active" id="aiPanel1">
+        <div class="ai-keyword-wrap">
+          <input
+            class="ai-keyword-input"
+            id="aiUrlInput"
+            type="url"
+            placeholder="貼入產品頁網址，例：https://www.ikea.com/…"
+            onkeydown="if(event.key==='Enter') startAiSearch()"
+          >
+          <button class="ai-search-btn" onclick="startAiSearch()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </div>
+        <div class="ai-hint">🔗 支援 IKEA、品牌官網、電商平台等產品頁，自動擷取品名、價格、圖片等資訊</div>
+      </div>
+
+      <!-- Panel 2: Loading -->
+      <div class="ai-panel" id="aiPanel2">
+        <div class="ai-loading">
+          <div class="ai-spinner"></div>
+          <div class="ai-loading-title">正在擷取產品資訊…</div>
+          <div class="ai-loading-sub" id="aiLoadingKeyword"></div>
+          <div class="ai-loading-steps">
+            <div class="ai-loading-step" id="loadStep1">🌐 連線至產品頁</div>
+            <div class="ai-loading-step" id="loadStep2">📄 讀取頁面內容</div>
+            <div class="ai-loading-step" id="loadStep3">📋 解析產品資訊</div>
+            <div class="ai-loading-step" id="loadStep4">✨ AI 補充搜尋</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Confirm -->
+      <div class="ai-panel" id="aiPanel3">
+        <div id="aiConfirmContent"></div>
+        <div class="form-actions" style="border-top:none;padding-top:0;margin-top:0">
+          <button class="btn btn-ghost" onclick="goToAiPanel(1)">↩ 重新貼入</button>
+          <button class="btn btn-primary" onclick="confirmAiSave()">✓ 確認儲存</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">品項詳情</div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ 設定</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <div class="settings-section-title">資料管理</div>
+        <div class="settings-section-desc">匯出目前所有品項資料（JSON 格式），或清空全部資料。</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="exportData()">📤 匯出資料</button>
+          <button class="btn btn-ghost" style="color:#c53030;border-color:#fed7d7" onclick="clearAllData()">🗑 清空全部</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'furniture_catalog_v1';
+const CATEGORIES = ['沙發','椅子','桌子','床架','層架','收納','燈具','地毯','戶外傢俱','裝飾品'];
+const CUSTOM_CATS_KEY = 'furniture_custom_categories';
+
+let items = [];
+let customCategories = [];
+let activeCategory = 'all';
+let activeBrand = 'all';
+let editingId = null;
+let pendingImageData = null;
+
+function allCategories() {
+  const custom = customCategories.filter(c => !CATEGORIES.includes(c) && c !== '其他');
+  return [...CATEGORIES, ...custom, '其他'];
+}
+
+// ─── Data ───────────────────────────────────────────
+function loadData() {
+  try { items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { items = []; }
+  try { customCategories = JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY) || '[]'); } catch(e) { customCategories = []; }
+}
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function saveCustomCategories() { localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(customCategories)); }
+
+function addCustomCategory(name) {
+  if (!name || allCategories().includes(name)) return;
+  customCategories.push(name);
+  saveCustomCategories();
+  rebuildTypeSelects();
+}
+
+function rebuildTypeSelects(forceSelectId, forceSelectVal) {
+  const cats = allCategories();
+  const makeOptions = (selectedVal) =>
+    `<option value="">請選擇分類</option>` +
+    cats.map(c => `<option value="${c}" ${selectedVal === c ? 'selected' : ''}>${c}</option>`).join('') +
+    `<option value="__custom__">＋ 自訂分類...</option>`;
+  for (const selId of ['fType', 'aiFType']) {
+    const sel = document.getElementById(selId);
+    if (!sel) continue;
+    const cur = forceSelectId === selId ? forceSelectVal
+              : sel.value === '__custom__' ? '' : sel.value;
+    sel.innerHTML = makeOptions(cur);
+  }
+}
+
+
+// ─── Categories ─────────────────────────────────────
+function renderCategoryTabs() {
+  const used = new Set(items.map(i => i.type).filter(Boolean));
+  const cats = allCategories().filter(c => used.has(c));
+  [...used].forEach(c => { if (!cats.includes(c)) cats.push(c); });
+  const container = document.getElementById('catTabs');
+  const allTab = `<button class="cat-tab ${activeCategory === 'all' ? 'active' : ''}" onclick="setCategory('all')">全部</button>`;
+  container.innerHTML = allTab + cats.map(c => `<button class="cat-tab ${activeCategory === c ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>`).join('');
+}
+
+function setCategory(cat) { activeCategory = cat; closeFilterSidebar(); renderCards(); }
+
+// ─── Brands ──────────────────────────────────────────
+function renderBrandTabs() {
+  // Group brands case-insensitively, keep the first-seen casing as display name
+  const brandMap = new Map();
+  items.forEach(i => {
+    const raw = (i.brand || '').trim();
+    if (!raw) return;
+    const key = raw.toLowerCase();
+    if (!brandMap.has(key)) brandMap.set(key, raw);
+  });
+  const brands = [...brandMap.values()].sort((a, b) => a.localeCompare(b));
+  const section = document.getElementById('brandSidebarSection');
+  if (brands.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const container = document.getElementById('brandTabs');
+  const allTab = `<button class="cat-tab ${activeBrand === 'all' ? 'active' : ''}" onclick="setBrand('all')">全部</button>`;
+  container.innerHTML = allTab + brands.map(b => `<button class="cat-tab ${activeBrand === b ? 'active' : ''}" onclick="setBrand('${b.replace(/'/g,"\\'")}')">${b}</button>`).join('');
+}
+
+function setBrand(brand) { activeBrand = brand; closeFilterSidebar(); renderCards(); }
+
+// ─── Render ─────────────────────────────────────────
+function getFilteredItems() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+  let result = [...items];
+  if (activeCategory !== 'all') result = result.filter(i => i.type === activeCategory);
+  if (activeBrand !== 'all') result = result.filter(i => (i.brand || '').trim().toLowerCase() === activeBrand.toLowerCase());
+  if (q) result = result.filter(i =>
+    (i.name||'').toLowerCase().includes(q) ||
+    (i.brand||'').toLowerCase().includes(q) ||
+    (i.color||'').toLowerCase().includes(q) ||
+    (i.material||'').toLowerCase().includes(q) ||
+    (i.desc||'').toLowerCase().includes(q)
+  );
+  if (sort === 'price-asc') result.sort((a,b) => (a.price||0)-(b.price||0));
+  else if (sort === 'price-desc') result.sort((a,b) => (b.price||0)-(a.price||0));
+  else if (sort === 'year-desc') result.sort((a,b) => (b.year||0)-(a.year||0));
+  else if (sort === 'name') result.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  else if (sort === 'brand') result.sort((a,b) => (a.brand||'').localeCompare(b.brand||''));
+  else if (sort === 'type') result.sort((a,b) => (a.type||'').localeCompare(b.type||''));
+  else result.sort((a,b) => b.createdAt - a.createdAt);
+  return result;
+}
+
+function renderCards() {
+  renderCategoryTabs();
+  renderBrandTabs();
+  updateFilterToggleBtn();
+  const filtered = getFilteredItems();
+  const grid = document.getElementById('grid');
+  document.getElementById('statsCount').innerHTML =
+    `共 <strong>${filtered.length}</strong> 件品項` +
+    (items.length !== filtered.length ? `（全部 ${items.length} 件）` : '');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <h3>${items.length === 0 ? '目錄還是空的' : '找不到符合條件的品項'}</h3>
+        <p>${items.length === 0 ? '點擊「網址新增」或「手動新增」建立傢俱目錄' : '試試更換關鍵字或分類'}</p>
+        ${items.length === 0 ? '<button class="btn btn-ai" onclick="openAiSearchModal()">🔗 網址新增</button>' : ''}
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(item => {
+    const price = item.price ? `NT$ ${Number(item.price).toLocaleString()}` : '—';
+    const imgSrc = item.image || item.imageUrl;
+    const imgHtml = imgSrc
+      ? `<img src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const noImgStyle = imgSrc ? 'display:none' : '';
+    return `
+      <div class="card" onclick="openDetail('${item.id}')">
+        <div class="card-img-wrap">
+          ${imgHtml}
+          <div class="card-no-img" style="${noImgStyle}">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>尚無圖片</span>
+          </div>
+          ${item.type ? `<div class="card-type-badge">${item.type}</div>` : ''}
+          <div class="card-actions-overlay" onclick="event.stopPropagation()">
+            <button class="card-action-btn" onclick="openEditModal('${item.id}')" title="編輯">✏️</button>
+            <button class="card-action-btn delete" onclick="deleteItem('${item.id}')" title="刪除">🗑</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-name">${item.name || '未命名'}</div>
+          ${item.brand ? `<div class="card-brand">${item.brand}</div>` : ''}
+          <div class="card-meta">
+            ${item.color ? `<span class="meta-tag">🎨 ${item.color}</span>` : ''}
+            ${item.material ? `<span class="meta-tag">🪵 ${item.material}</span>` : ''}
+            ${item.size ? `<span class="meta-tag">📐 ${item.size}</span>` : ''}
+          </div>
+          <div class="card-footer">
+            <div class="card-price">${price}</div>
+            ${item.year ? `<div class="card-year">${item.year}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Manual Add/Edit Modal ───────────────────────────
+function openAddModal() {
+  editingId = null;
+  pendingImageData = null;
+  document.getElementById('formModalTitle').textContent = '新增傢俱品項';
+  clearForm();
+  document.getElementById('formModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingId = id;
+  pendingImageData = item.image || null;
+  document.getElementById('formModalTitle').textContent = '編輯品項';
+  document.getElementById('fName').value = item.name || '';
+  document.getElementById('fBrand').value = item.brand || '';
+  document.getElementById('fYear').value = item.year || '';
+  document.getElementById('fColor').value = item.color || '';
+  document.getElementById('fMaterial').value = item.material || '';
+  document.getElementById('fSize').value = item.size || '';
+  document.getElementById('fType').value = item.type || '';
+  document.getElementById('fPrice').value = item.price || '';
+  document.getElementById('fDesc').value = item.desc || '';
+
+  const area = document.getElementById('imgUploadArea');
+  const preview = document.getElementById('imgUploadPreview');
+  const imgSrc = item.image || item.imageUrl;
+  if (imgSrc) {
+    preview.src = imgSrc;
+    area.classList.add('has-image');
+  } else {
+    area.classList.remove('has-image');
+    preview.src = '';
+  }
+  document.getElementById('formModal').classList.add('open');
+}
+
+function closeFormModal() {
+  document.getElementById('formModal').classList.remove('open');
+  editingId = null; pendingImageData = null;
+}
+
+function clearForm() {
+  ['fName','fBrand','fYear','fColor','fMaterial','fPrice','fDesc'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fType').value = '';
+  document.getElementById('imgUploadArea').classList.remove('has-image');
+  document.getElementById('imgUploadPreview').src = '';
+  document.getElementById('imgFileInput').value = '';
+}
+
+function handleImgClick(e) {
+  if (e.target === document.getElementById('imgFileInput')) return;
+  document.getElementById('imgFileInput').click();
+}
+
+function handleImgChange(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingImageData = ev.target.result;
+    document.getElementById('imgUploadPreview').src = pendingImageData;
+    document.getElementById('imgUploadArea').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+}
+
+const uploadArea = document.getElementById('imgUploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = 'var(--accent)'; });
+uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = ''; });
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault(); uploadArea.style.borderColor = '';
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingImageData = ev.target.result;
+    document.getElementById('imgUploadPreview').src = pendingImageData;
+    document.getElementById('imgUploadArea').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+});
+
+function saveItem() {
+  const name = document.getElementById('fName').value.trim();
+  let type = document.getElementById('fType').value;
+  if (type === '__custom__') {
+    type = document.getElementById('fTypeCustom').value.trim();
+    if (!type) { showToast('請輸入自訂分類名稱'); return; }
+    addCustomCategory(type);
+  }
+  if (!name) { showToast('請填寫品名'); return; }
+  if (!type) { showToast('請選擇傢俱類型'); return; }
+  const data = {
+    id: editingId || Date.now().toString(),
+    name,
+    brand: document.getElementById('fBrand').value.trim(),
+    year: document.getElementById('fYear').value.trim(),
+    color: document.getElementById('fColor').value.trim(),
+    material: document.getElementById('fMaterial').value.trim(),
+    size: document.getElementById('fSize').value.trim(),
+    type,
+    price: document.getElementById('fPrice').value.trim(),
+    desc: document.getElementById('fDesc').value.trim(),
+    image: pendingImageData || null,
+    imageUrl: editingId ? (items.find(i => i.id === editingId)?.imageUrl || '') : '',
+    sourceUrl: editingId ? (items.find(i => i.id === editingId)?.sourceUrl || '') : '',
+    createdAt: editingId ? (items.find(i => i.id === editingId)?.createdAt || Date.now()) : Date.now(),
+  };
+  if (editingId) {
+    const idx = items.findIndex(i => i.id === editingId);
+    if (idx !== -1) items[idx] = data;
+    showToast('品項已更新');
+  } else {
+    items.unshift(data);
+    showToast('已新增品項');
+  }
+  saveData(); closeFormModal(); renderCards();
+}
+
+// ─── Delete ─────────────────────────────────────────
+function deleteItem(id) {
+  if (!confirm('確定要刪除這件品項嗎？')) return;
+  items = items.filter(i => i.id !== id);
+  saveData(); showToast('品項已刪除'); renderCards();
+}
+
+// ─── Detail Modal ────────────────────────────────────
+function openDetail(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const price = item.price ? `NT$ ${Number(item.price).toLocaleString()}` : '未提供';
+  const imgSrc = item.image || item.imageUrl;
+  document.getElementById('detailBody').innerHTML = `
+    ${imgSrc ? `<img class="detail-img" src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none'">` : ''}
+    <div class="detail-name">${item.name || '未命名'}</div>
+    <div class="detail-brand">${item.brand || ''}</div>
+    <div class="detail-price">${price}</div>
+    <div class="detail-grid">
+      ${item.type ? `<div class="detail-item"><div class="detail-item-label">類型</div><div class="detail-item-value">${item.type}</div></div>` : ''}
+      ${item.color ? `<div class="detail-item"><div class="detail-item-label">顏色</div><div class="detail-item-value">${item.color}</div></div>` : ''}
+      ${item.material ? `<div class="detail-item"><div class="detail-item-label">材質</div><div class="detail-item-value">${item.material}</div></div>` : ''}
+      ${item.size ? `<div class="detail-item"><div class="detail-item-label">尺寸</div><div class="detail-item-value">${item.size}</div></div>` : ''}
+      ${item.year ? `<div class="detail-item"><div class="detail-item-label">推出年份</div><div class="detail-item-value">${item.year} 年</div></div>` : ''}
+      ${item.brand ? `<div class="detail-item"><div class="detail-item-label">品牌</div><div class="detail-item-value">${item.brand}</div></div>` : ''}
+    </div>
+    ${item.desc ? `<div class="detail-desc">${item.desc}</div>` : ''}
+    ${item.sourceUrl ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">來源：<a href="${item.sourceUrl}" target="_blank" style="color:var(--accent);word-break:break-all">${item.sourceUrl}</a></div>` : ''}
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeDetailModal();openEditModal('${item.id}')">✏️ 編輯</button>
+      <button class="btn btn-ghost" style="color:#e53e3e;border-color:#fed7d7" onclick="closeDetailModal();deleteItem('${item.id}')">🗑 刪除</button>
+    </div>
+    ${item.sourceUrl ? `
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:14px">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="togglePhotos('${item.id}')">🖼 顯示產品照片</button>
+      <div id="photosPanel_${item.id}" style="display:none;margin-top:12px"></div>
+    </div>` : ''}`;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetailModal() { document.getElementById('detailModal').classList.remove('open'); }
+
+function togglePhotos(id) {
+  const panel = document.getElementById(`photosPanel_${id}`);
+  const btn = panel?.previousElementSibling;
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    if (!panel.dataset.loaded) loadProductPhotos(id, panel, btn);
+  } else {
+    panel.style.display = 'none';
+    if (btn) btn.textContent = '🖼 顯示產品照片';
+  }
+}
+
+async function loadProductPhotos(id, panel, btn) {
+  const item = items.find(i => i.id === id);
+  if (!item?.sourceUrl) return;
+  panel.dataset.loaded = '1';
+  if (btn) btn.textContent = '⏳ 載入中…';
+  panel.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:8px 0">正在從來源頁面取得照片…</div>`;
+
+  try {
+    const html = await fetchViaProxy(item.sourceUrl);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    // Collect candidate image URLs from multiple sources
+    const seen = new Set();
+    const imgs = [];
+
+    // 1. JSON-LD Product images
+    for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
+      try {
+        const json = JSON.parse(script.textContent);
+        const candidates = Array.isArray(json) ? json : [json, ...(json['@graph'] || [])];
+        const prod = candidates.find(x => x['@type'] === 'Product');
+        if (prod?.image) {
+          const list = Array.isArray(prod.image) ? prod.image : [prod.image];
+          for (const img of list) {
+            const u = img?.url || img?.contentUrl || (typeof img === 'string' ? img : '');
+            if (u && !seen.has(u)) { seen.add(u); imgs.push(u); }
+          }
+        }
+      } catch {}
+    }
+
+    // 2. WooCommerce variation images from data-product_variations JSON
+    const form = doc.querySelector('form.variations_form[data-product_variations]');
+    if (form) {
+      try {
+        const vars = JSON.parse(form.getAttribute('data-product_variations'));
+        for (const v of vars) {
+          const u = v?.image?.url || v?.image?.src || '';
+          if (u && !seen.has(u) && !/placeholder|woocommerce-placeholder/.test(u)) {
+            seen.add(u); imgs.push(u);
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Product gallery images
+    for (const el of doc.querySelectorAll(
+      '.woocommerce-product-gallery__image img, .product-gallery img, [class*="gallery"] img, [class*="product-image"] img'
+    )) {
+      const u = el.getAttribute('data-large_image') || el.getAttribute('data-src') || el.getAttribute('src') || '';
+      if (u && /^https?:\/\//.test(u) && !seen.has(u) && !/placeholder/.test(u)) {
+        seen.add(u); imgs.push(u);
+      }
+    }
+
+    // 4. og:image as last fallback
+    const og = doc.querySelector('meta[property="og:image"]')?.getAttribute('content');
+    if (og && !seen.has(og)) { seen.add(og); imgs.push(og); }
+
+    const limited = imgs.slice(0, 10);
+
+    if (!limited.length) {
+      panel.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:8px 0">未在來源頁面找到產品照片。</div>`;
+      if (btn) btn.textContent = '🖼 顯示產品照片';
+      return;
+    }
+
+    if (btn) btn.textContent = `🖼 收起照片（${limited.length} 張）`;
+    panel.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+        ${limited.map(u => `
+          <a href="${u}" target="_blank" style="display:block;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);background:var(--accent-light)">
+            <img src="${u}" style="width:100%;height:120px;object-fit:contain;display:block"
+              onerror="this.closest('a').style.display='none'">
+          </a>`).join('')}
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">共 ${limited.length} 張，點擊可開啟原圖</div>`;
+  } catch (err) {
+    panel.innerHTML = `<div style="font-size:13px;color:#c53030;padding:8px 0">無法載入照片：${err.message}</div>`;
+    if (btn) btn.textContent = '🖼 顯示產品照片';
+  }
+}
+
+// ─── Settings Modal ──────────────────────────────────
+function getAnthropicKey() { return localStorage.getItem('furniture_anthropic_key') || ''; }
+
+function saveAnthropicKey() {
+  const key = document.getElementById('settingsApiKey').value.trim();
+  if (key) {
+    localStorage.setItem('furniture_anthropic_key', key);
+    document.getElementById('apiKeyStatus').textContent = '✓ 已儲存';
+    document.getElementById('apiKeyStatus').style.color = 'var(--green)';
+  } else {
+    localStorage.removeItem('furniture_anthropic_key');
+    document.getElementById('apiKeyStatus').textContent = '已清除 API Key';
+    document.getElementById('apiKeyStatus').style.color = 'var(--text-muted)';
+  }
+}
+
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+  const key = getAnthropicKey();
+  document.getElementById('settingsApiKey').value = key ? '••••••••' + key.slice(-6) : '';
+  const status = document.getElementById('apiKeyStatus');
+  if (key) { status.textContent = '✓ 已設定 API Key，使用 Claude 搜尋'; status.style.color = 'var(--green)'; }
+  else { status.textContent = '未設定，將使用 Wikipedia 搜尋'; status.style.color = 'var(--text-muted)'; }
+}
+
+function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(items, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `傢俱目錄_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function clearAllData() {
+  if (!confirm('確定要清空全部品項嗎？此操作無法復原。')) return;
+  items = []; saveData(); renderCards(); showToast('已清空全部資料');
+}
+
+// ─── AI Smart Search ─────────────────────────────────
+let aiCurrentStep = 1;
+let aiFoundData = null;
+
+function openAiSearchModal() {
+
+  goToAiPanel(1);
+  document.getElementById('aiUrlInput').value = '';
+  document.getElementById('aiModal').classList.add('open');
+  setTimeout(() => document.getElementById('aiUrlInput').focus(), 200);
+}
+
+function closeAiModal() {
+  document.getElementById('aiModal').classList.remove('open');
+  aiFoundData = null;
+}
+
+function goToAiPanel(n) {
+  aiCurrentStep = n;
+  [1,2,3].forEach(i => {
+    document.getElementById(`aiPanel${i}`).classList.toggle('active', i === n);
+    const ind = document.getElementById(`aiStep${i}Ind`);
+    ind.classList.remove('active','done');
+    if (i < n) ind.classList.add('done');
+    else if (i === n) ind.classList.add('active');
+  });
+}
+
+function setLoadStep(step) {
+  ['loadStep1','loadStep2','loadStep3','loadStep4'].forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('done','current');
+    if (idx + 1 < step) el.classList.add('done');
+    else if (idx + 1 === step) el.classList.add('current');
+  });
+}
+
+// ── Brand / Year / Type inference ────────────────────────────────────
+const KNOWN_BRANDS = [
+  'Herman Miller','Knoll','IKEA','Muji','無印良品','HAY','Fritz Hansen',
+  'Vitra','Kartell','Cassina','Arflex','Flos','Louis Poulsen','Artemide',
+  'Moooi','Magis','Normann Copenhagen','Menu','String','Montana',
+  'B&B Italia','&Tradition','Foscarini','Tom Dixon','Moroso','Poliform',
+  'USM','Carl Hansen','PP Møbler','Ercol','Ligne Roset','Rolf Benz',
+  'Walter Knoll','Cappellini','Zanotta','Alias','Andreu World','Emeco',
+  'Hay','Muuto','Ferm Living','New Works','Audo','Gubi','Bolia','BoConcept',
+];
+
+function inferBrand(text) {
+  const lower = text.toLowerCase();
+  for (const b of KNOWN_BRANDS) {
+    if (lower.includes(b.toLowerCase())) return b;
+  }
+  return '';
+}
+
+function inferYear(text) {
+  const m = text.match(/\b(19[4-9]\d|20[0-2]\d)\b/);
+  return m ? parseInt(m[0]) : 0;
+}
+
+function inferType(name, fallbackText) {
+  // Prioritise product name; only fall back to broader text if name gives no match
+  for (const text of [name, fallbackText].filter(Boolean)) {
+    const t = text.toLowerCase();
+    if (/沙發|sofa|couch|loveseat|sectional/.test(t)) return '沙發';
+    if (/層架|shelving.?unit|shelf.?unit|open.?shelf|etagere|étagère/.test(t)) return '層架';
+    if (/椅|chair|stool|armchair|recliner|rocker/.test(t)) return '椅子';
+    if (/桌|table|desk|console|counter/.test(t)) return '桌子';
+    if (/床|bed|bedframe/.test(t)) return '床架';
+    if (/收納|storage|cabinet|bookcase|drawer|sideboard/.test(t)) return '收納';
+    if (/燈|lamp|light|pendant|sconce|chandelier|lighting/.test(t)) return '燈具';
+    if (/地毯|rug|carpet/.test(t)) return '地毯';
+    if (/戶外|outdoor|garden|patio/.test(t)) return '戶外傢俱';
+    if (/裝飾|deco|vase|candle|mirror|frame|掛畫|畫框|花瓶/.test(t)) return '裝飾品';
+    if (text === name) continue; // name gave no match, try fallback
+    break;
+  }
+  return ''; // leave blank so user can select manually
+}
+
+// ── URL-based product page scraper ───────────────────────────────────
+async function fetchViaProxy(url) {
+  const proxies = [
+    async () => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      if (!d.contents) throw new Error();
+      return d.contents;
+    },
+    async () => {
+      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error();
+      return await r.text();
+    },
+    async () => {
+      const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error();
+      return await r.text();
+    },
+  ];
+  for (const proxy of proxies) {
+    try { return await proxy(); } catch {}
+  }
+  throw new Error('無法取得頁面，所有代理均失敗，請稍後再試');
+}
+
+async function searchWithUrl(url) {
+  const html = await fetchViaProxy(url);
+  if (!html) throw new Error('頁面內容為空');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // ── Text cleanup ──────────────────────────────────────────────────────
+  // Collapse whitespace, remove zero-width chars, trim punctuation noise
+  function cleanText(s) {
+    if (!s) return '';
+    return s
+      .replace(/[\u200b\u200c\u200d\ufeff]/g, '')   // zero-width chars
+      .replace(/\s+/g, ' ')                           // collapse whitespace
+      .replace(/^[\s\-–—:：,，。.]+|[\s\-–—:：,，。.]+$/g, '')  // trim leading/trailing noise
+      .trim();
+  }
+
+  // Helper: get first matching meta content
+  const meta = (...selectors) => {
+    for (const sel of selectors) {
+      const el = doc.querySelector(sel);
+      if (el) return (el.getAttribute('content') || el.textContent || '').trim();
+    }
+    return '';
+  };
+
+  // Helper: get all visible text from a set of selectors
+  const getText = (...selectors) => {
+    for (const sel of selectors) {
+      const el = doc.querySelector(sel);
+      if (el) return el.textContent.replace(/\s+/g, ' ').trim();
+    }
+    return '';
+  };
+
+  // Try JSON-LD structured data first (most reliable for e-commerce)
+  let product = null;
+  for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
+    try {
+      const json = JSON.parse(script.textContent);
+      const candidates = Array.isArray(json) ? json : [json, ...(json['@graph'] || [])];
+      product = candidates.find(x => x['@type'] === 'Product' || x['@type'] === 'ItemPage');
+      if (product) break;
+    } catch {}
+  }
+
+  // ── Name ──
+  const rawName = product?.name
+    || meta('meta[property="og:title"]', 'meta[name="twitter:title"]')
+    || getText('h1')
+    || '';
+
+  // ── Description: collect from multiple sources and pick longest ──
+  const descCandidates = [
+    product?.description,
+    meta('meta[property="og:description"]', 'meta[name="description"]'),
+    getText(
+      '.woocommerce-product-details__short-description',
+      '.product-description', '.product-detail', '.product-info',
+      '[class*="description"]', '[class*="detail"]', '[itemprop="description"]'
+    ),
+  ].filter(Boolean).map(s => s.replace(/\s+/g, ' ').trim());
+  const rawDesc = descCandidates.sort((a, b) => b.length - a.length)[0] || '';
+
+  // ── Image ──
+  let rawImage = '';
+  if (product?.image) {
+    const img = Array.isArray(product.image) ? product.image[0] : product.image;
+    rawImage = img?.url || img?.contentUrl || (typeof img === 'string' ? img : '');
+  }
+  if (!rawImage) rawImage = meta('meta[property="og:image"]', 'meta[name="twitter:image"]');
+
+  // ── Price ──
+  let price = 0;
+  const offerPrice = product?.offers?.price ?? product?.offers?.[0]?.price;
+  if (offerPrice) price = parseInt(offerPrice) || 0;
+  if (!price) price = parseInt(meta('meta[property="product:price:amount"]')) || 0;
+  if (!price) {
+    // WooCommerce: <span class="woocommerce-Price-amount">
+    const wcPrice = doc.querySelector('.woocommerce-Price-amount');
+    if (wcPrice) {
+      const n = parseInt(wcPrice.textContent.replace(/[^\d]/g, '')) || 0;
+      if (n >= 100 && n <= 10000000) price = n;
+    }
+  }
+  if (!price) {
+    // Scan page text for price patterns with $ / NT$ / TWD / 元 / 円
+    const bodyText = doc.body?.textContent || '';
+    const pricePatterns = [
+      /NT\$\s*([\d,]+)/i,
+      /NTD\s*([\d,]+)/i,
+      /TWD\s*([\d,]+)/i,
+      /\$\s*([\d,]+)/,
+      /([\d,]+)\s*元/,
+      /([\d,]+)\s*円/,
+    ];
+    for (const re of pricePatterns) {
+      const m = bodyText.match(re);
+      if (m) {
+        const candidate = parseInt(m[1].replace(/,/g, '')) || 0;
+        if (candidate >= 100 && candidate <= 10000000) { price = candidate; break; }
+      }
+    }
+  }
+
+  // ── Brand ──
+  const rawBrand = product?.brand?.name
+    || meta('meta[property="og:brand"]', 'meta[property="product:brand"]', 'meta[name="brand"]')
+    || getText('[itemprop="brand"]')
+    || extractSpec(/^(?:品牌|brand|廠牌|manufacturer|製造商)$/i)
+    || '';
+
+  // ── Spec extraction helper ──
+  // Strategy 1: label/value are sibling elements (th/td, dt/dd, or adjacent spans)
+  // Extract readable text from a value element, handling select/ul swatch specially
+  function extractValueText(el) {
+    // WooCommerce color swatch: <ul> with <li title="...">
+    const swatchItems = el.querySelectorAll('li[title]');
+    if (swatchItems.length) {
+      return [...swatchItems].map(li => cleanText(li.getAttribute('title'))).filter(Boolean).join(' / ');
+    }
+    // <select>: collect non-placeholder option texts
+    const sel = el.querySelector('select');
+    if (sel) {
+      const opts = [...sel.options].filter(o => o.value && o.value !== '').map(o => cleanText(o.text));
+      return opts.join(' / ');
+    }
+    // Plain text: clean and return
+    return cleanText(el.textContent);
+  }
+
+  function extractSpec(labelRe) {
+    // Strip ^ and $ anchors for use in multiline text search
+    const src = labelRe.source.replace(/^\^/, '').replace(/\$$/, '');
+
+    // Strategy 1: label element → adjacent sibling value element
+    for (const labelEl of doc.querySelectorAll('th, dt, td, [class*="label"], [class*="spec-key"], [class*="attr"], [class*="property"]')) {
+      const t = cleanText(labelEl.textContent);
+      if (!new RegExp('^(?:' + src + ')$', 'i').test(t)) continue;
+      const sib = labelEl.nextElementSibling || labelEl.parentElement?.nextElementSibling;
+      if (sib) {
+        const v = extractValueText(sib);
+        if (v && v.length < 200 && !new RegExp('^(?:' + src + ')$', 'i').test(v)) return v;
+      }
+    }
+    // Strategy 2: "label：value" pattern anywhere in page text (multiline)
+    const pageText = doc.body?.innerText || doc.body?.textContent || '';
+    const m = pageText.match(new RegExp('(?:^|\\n)\\s*(?:' + src + ')[\\s:：\\-]+([^\\n]{1,80})', 'i'));
+    if (m) return cleanText(m[1]);
+    return '';
+  }
+
+  // ── Color & Material (separate) ──
+  let rawColor    = extractSpec(/^(?:顏色|color|色彩|色)$/i);
+  let rawMaterial = product?.material || extractSpec(/^(?:材質|material|fabric|素材|材料)$/i);
+
+  // ── Size / Dimensions ──
+  let rawSize = product?.size || product?.depth
+    || extractSpec(/^(?:尺寸|規格|dimensions?|size|寬[×x×]深[×x×]高|W[×x×]D[×x×]H|product\s*size)$/i);
+  if (!rawSize) {
+    // Fallback: dimension pattern anywhere in page text
+    const pageText = doc.body?.textContent || '';
+    const dimMatch = (rawDesc + ' ' + pageText).match(
+      /(?:W\s*\d+[\s×xX]+D\s*\d+[\s×xX]+H\s*\d+|\d+[\s]*[×xX][\s]*\d+[\s]*[×xX][\s]*\d+)(?:\s*cm)?/i
+    );
+    if (dimMatch) rawSize = dimMatch[0].trim();
+  }
+
+  // ── Year ──
+  const fullText = rawName + ' ' + rawDesc + ' ' + url;
+  let year = product?.releaseDate ? (parseInt(product.releaseDate) || 0) : 0;
+
+  return {
+    name:     cleanText(rawName).slice(0, 120),
+    brand:    cleanText(rawBrand).slice(0, 80),
+    year,
+    color:    cleanText(rawColor).slice(0, 60),
+    material: cleanText(rawMaterial).slice(0, 60),
+    size:     cleanText(rawSize).slice(0, 80),
+    type:     inferType(rawName, rawDesc),
+    price,
+    desc:     cleanText(rawDesc).slice(0, 250),
+    imageUrl: typeof rawImage === 'string' ? rawImage.trim() : '',
+  };
+}
+
+async function searchWithWikipedia(keyword) {
+  const found = { name: keyword, brand: '', color: '', material: '', price: 0, year: 0, type: inferType(keyword, ''), desc: '', imageUrl: '' };
+
+  // Try English then Chinese Wikipedia
+  for (const lang of ['en', 'zh']) {
+    const base = `https://${lang}.wikipedia.org`;
+
+    // Full-text search (better matching than opensearch)
+    const searchRes = await fetch(
+      `${base}/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(keyword)}&format=json&origin=*&srlimit=5&srprop=snippet`
+    ).catch(() => null);
+    if (!searchRes?.ok) continue;
+
+    const searchData = await searchRes.json().catch(() => ({}));
+    const hits = searchData.query?.search || [];
+    if (!hits.length) continue;
+
+    const top = hits[0];
+
+    // Get summary + wikibase item ID in one call
+    const infoRes = await fetch(
+      `${base}/w/api.php?action=query&pageids=${top.pageid}&prop=extracts|pageimages|pageprops&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=600&format=json&origin=*`
+    ).catch(() => null);
+    if (!infoRes?.ok) break;
+
+    const infoData = await infoRes.json().catch(() => ({}));
+    const page = Object.values(infoData.query?.pages || {})[0] || {};
+
+    found.name     = page.title || top.title;
+    found.desc     = (page.extract || top.snippet?.replace(/<[^>]+>/g,'') || '').slice(0, 160);
+    found.imageUrl = page.thumbnail?.source || '';
+
+    const wdId = page.pageprops?.wikibase_item;
+    if (wdId) {
+      // Query Wikidata via SPARQL for brand, year, material, image
+      const sparql = `
+        SELECT ?mfrLabel ?inception ?materialLabel ?image WHERE {
+          OPTIONAL { wd:${wdId} wdt:P176 ?mfr . }
+          OPTIONAL { wd:${wdId} wdt:P571 ?inception . }
+          OPTIONAL { wd:${wdId} wdt:P186 ?material . }
+          OPTIONAL { wd:${wdId} wdt:P18  ?image . }
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "zh-tw,zh,en" . }
+        } LIMIT 1`;
+
+      const wdRes = await fetch(
+        `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`,
+        { headers: { Accept: 'application/sparql-results+json' } }
+      ).catch(() => null);
+
+      if (wdRes?.ok) {
+        const wdData = await wdRes.json().catch(() => ({}));
+        const row = wdData.results?.bindings?.[0] || {};
+
+        if (row.mfrLabel?.value)    found.brand    = row.mfrLabel.value;
+        if (row.materialLabel?.value) found.material = row.materialLabel.value;
+        if (row.inception?.value) {
+          const ym = row.inception.value.match(/\d{4}/);
+          if (ym) found.year = parseInt(ym[0]);
+        }
+        if (row.image?.value && !found.imageUrl) {
+          // Convert Wikimedia file URL to Special:FilePath redirect
+          const fileName = decodeURIComponent(row.image.value.split('/').pop());
+          found.imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
+        }
+      }
+    }
+
+    if (!found.type) found.type = inferType(found.name, keyword);
+
+    break; // Got results
+  }
+
+  return found;
+}
+
+// ── Claude AI search ─────────────────────────────────────────────────
+async function searchWithClaude(keyword) {
+  const apiKey = getAnthropicKey();
+  const prompt = `請上網搜尋傢俱品項「${keyword}」的詳細資訊。
+規則：
+- 只回傳 JSON，不要任何其他文字或 markdown
+- 若某欄位在網路上找不到明確資料，一律填空字串 "" 或 0，不要猜測或推斷
+- price 填台灣市場官方售價新台幣整數，若找不到填 0
+- year 填正式推出年份整數，若找不到填 0
+- imageUrl 優先找官方產品頁的高解析度圖片網址，若找不到填 ""
+
+{
+  "name": "完整品名（必填）",
+  "brand": "品牌名稱，找不到填空字串",
+  "year": 推出年份整數或0,
+  "color": "主要顏色，找不到填空字串",
+  "material": "主要材質，找不到填空字串",
+  "type": "沙發/椅子/桌子/床架/層架/收納/燈具/地毯/戶外傢俱/裝飾品/其他 其中一項",
+  "price": 新台幣整數或0,
+  "desc": "200字以內繁體中文介紹，找不到填空字串",
+  "imageUrl": "圖片網址或空字串"
+}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API 錯誤 ${res.status}`);
+  }
+
+  const data = await res.json();
+  const textBlock = (data.content || []).filter(b => b.type === 'text').pop();
+  if (!textBlock) throw new Error('無法解析搜尋結果');
+
+  const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('無法取得結構化資料');
+
+  const found = JSON.parse(jsonMatch[0]);
+  return {
+    name:     found.name     || keyword,
+    brand:    found.brand    || '',
+    year:     parseInt(found.year)  || 0,
+    color:    found.color    || '',
+    material: found.material || '',
+    type:     found.type     || inferType(found.name || keyword, found.desc),
+    price:    parseInt(found.price) || 0,
+    desc:     found.desc     || '',
+    imageUrl: found.imageUrl || '',
+  };
+}
+
+// ── Main entry point ─────────────────────────────────────────────────
+async function startAiSearch() {
+  const url = document.getElementById('aiUrlInput').value.trim();
+  if (!url) { showToast('請貼入產品頁網址'); return; }
+  if (!/^https?:\/\//i.test(url)) { showToast('請輸入完整網址（以 http:// 或 https:// 開頭）'); return; }
+
+  const existing = items.find(i => i.sourceUrl === url);
+  if (existing) {
+    showToast(`「${existing.name || '此品項'}」已新增過，可在目錄中找到`);
+    return;
+  }
+
+  document.getElementById('aiLoadingKeyword').textContent = new URL(url).hostname;
+  goToAiPanel(2);
+  setLoadStep(1);
+
+  try {
+    await delay(200);
+    setLoadStep(2);
+    let found;
+    try {
+      found = await searchWithUrl(url);
+      setLoadStep(3);
+      await delay(200);
+      if (!found.type) found.type = inferType(found.name, found.desc);
+    } catch (urlErr) {
+      // URL scraping failed — try Claude AI if API key available
+      if (!getAnthropicKey()) throw urlErr;
+      setLoadStep(4);
+      document.getElementById('aiLoadingKeyword').textContent = 'AI 搜尋中…';
+      found = await searchWithClaude(new URL(url).hostname + ' ' + url);
+      if (!found.type) found.type = inferType(found.name, found.desc);
+    }
+    found.sourceUrl = url;
+    aiFoundData = found;
+    showConfirmPanel(found, url);
+  } catch (err) {
+    showAiError('擷取失敗：' + (err.message || '請確認網址後再試'));
+  }
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showConfirmPanel(d, keyword) {
+  goToAiPanel(3);
+
+  const imgSrc = d.imageUrl || '';
+  const imgBlock = imgSrc
+    ? `<img class="ai-confirm-img" src="${imgSrc}" alt="${d.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const placeholderStyle = imgSrc ? 'display:none' : '';
+
+  const catOptions = allCategories().map(c =>
+    `<option value="${c}" ${d.type === c ? 'selected' : ''}>${c}</option>`
+  ).join('') + `<option value="__custom__">＋ 自訂分類...</option>`;
+
+  document.getElementById('aiConfirmContent').innerHTML = `
+    <div style="margin-bottom:16px;font-size:13px;color:var(--text-muted)">
+      請確認以下資訊是否正確，空白欄位表示網頁未提供，可直接手動填入後儲存。
+    </div>
+    <div class="ai-confirm-card">
+      ${imgBlock}
+      <div class="ai-confirm-img-placeholder" style="${placeholderStyle}">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>未找到圖片</span>
+      </div>
+      <div class="ai-confirm-body">
+        <div class="ai-confirm-row">
+          <div class="ai-field-group" style="grid-column:1/-1">
+            <div class="ai-field-label">品名</div>
+            <input class="ai-field-input" id="aiFName" value="${escHtml(d.name || '')}" placeholder="品名">
+          </div>
+        </div>
+        <div class="ai-confirm-row">
+          <div class="ai-field-group">
+            <div class="ai-field-label">品牌</div>
+            <input class="ai-field-input" id="aiFBrand" value="${escHtml(d.brand || '')}" placeholder="品牌">
+          </div>
+          <div class="ai-field-group">
+            <div class="ai-field-label">傢俱類型</div>
+            <select class="ai-field-select" id="aiFType" onchange="handleTypeSelectChange('aiFType','aiFTypeCustom')">
+              <option value="">請選擇</option>${catOptions}
+            </select>
+            <input type="text" id="aiFTypeCustom" placeholder="輸入新分類名稱，按 Enter 建立" style="display:none;margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px" onkeydown="handleCustomCatKey(event,'aiFType','aiFTypeCustom')">
+          </div>
+        </div>
+        <div class="ai-confirm-row">
+          <div class="ai-field-group">
+            <div class="ai-field-label">顏色</div>
+            <input class="ai-field-input" id="aiFColor" value="${escHtml(d.color || '')}" placeholder="例：黑色、深灰">
+          </div>
+          <div class="ai-field-group">
+            <div class="ai-field-label">材質</div>
+            <input class="ai-field-input" id="aiFMaterial" value="${escHtml(d.material || '')}" placeholder="例：胡桃木、皮革">
+          </div>
+          <div class="ai-field-group">
+            <div class="ai-field-label">尺寸</div>
+            <input class="ai-field-input" id="aiFSize" value="${escHtml(d.size || '')}" placeholder="例：W120 × D60 × H75 cm">
+          </div>
+        </div>
+        <div class="ai-confirm-row">
+          <div class="ai-field-group" style="grid-column:1/-1">
+            <div class="ai-field-label">推出年份</div>
+            <input class="ai-field-input" id="aiFYear" type="number" value="${d.year > 0 ? d.year : ''}" placeholder="年份">
+          </div>
+        </div>
+        <div class="ai-confirm-row">
+          <div class="ai-field-group" style="grid-column:1/-1">
+            <div class="ai-field-label">價格（NT$）</div>
+            <input class="ai-field-input" id="aiFPrice" type="number" value="${d.price > 0 ? d.price : ''}" placeholder="價格">
+          </div>
+        </div>
+        <div class="ai-field-group" style="margin-bottom:12px">
+          <div class="ai-field-label">產品描述</div>
+          <textarea class="ai-field-textarea" id="aiFDesc">${escHtml(d.desc || '')}</textarea>
+        </div>
+        <div class="ai-source-note">
+          ℹ️ 資訊由 Claude AI 透過網路搜尋「${escHtml(keyword)}」整理，請核對後再儲存。價格為估算值，建議以官方售價為準。
+        </div>
+      </div>
+    </div>`;
+}
+
+function showAiError(msg) {
+  goToAiPanel(3);
+  document.getElementById('aiConfirmContent').innerHTML = `
+    <div class="ai-error-box">
+      <strong>搜尋失敗</strong><br>${escHtml(msg)}
+    </div>`;
+}
+
+function confirmAiSave() {
+  const name = (document.getElementById('aiFName')?.value || '').trim();
+  let type = document.getElementById('aiFType')?.value || '';
+  if (type === '__custom__') {
+    type = (document.getElementById('aiFTypeCustom')?.value || '').trim();
+    if (!type) { showToast('請輸入自訂分類名稱'); return; }
+    addCustomCategory(type);
+  }
+  if (!name) { showToast('請填寫品名'); return; }
+  if (!type) { showToast('請選擇傢俱類型'); return; }
+
+  const item = {
+    id: Date.now().toString(),
+    name,
+    brand: (document.getElementById('aiFBrand')?.value || '').trim(),
+    year: (document.getElementById('aiFYear')?.value || '').trim(),
+    color: (document.getElementById('aiFColor')?.value || '').trim(),
+    material: (document.getElementById('aiFMaterial')?.value || '').trim(),
+    size: (document.getElementById('aiFSize')?.value || '').trim(),
+    type,
+    price: (document.getElementById('aiFPrice')?.value || '').trim(),
+    desc: (document.getElementById('aiFDesc')?.value || '').trim(),
+    image: null,
+    imageUrl: aiFoundData?.imageUrl || '',
+    sourceUrl: aiFoundData?.sourceUrl || '',
+    createdAt: Date.now(),
+  };
+
+  items.unshift(item);
+  saveData();
+  closeAiModal();
+  renderCards();
+  showToast('已新增品項');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Modal close helpers ─────────────────────────────
+['detailModal','settingsModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target.id === id) {
+      if (id === 'detailModal') closeDetailModal();
+      else if (id === 'settingsModal') closeSettings();
+    }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDetailModal(); closeSettings();
+  }
+});
+
+// ─── Toast ───────────────────────────────────────────
+function handleTypeSelectChange(selId, inputId) {
+  const sel = document.getElementById(selId);
+  const inp = document.getElementById(inputId);
+  if (!sel || !inp) return;
+  if (sel.value === '__custom__') {
+    inp.style.display = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = '';
+  }
+}
+
+function handleCustomCatKey(e, selId, inputId) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const inp = document.getElementById(inputId);
+  const name = inp.value.trim();
+  if (!name) { showToast('請輸入分類名稱'); return; }
+  // Add to list and rebuild selects, forcing this select to show the new value
+  if (!allCategories().includes(name)) {
+    customCategories.push(name);
+    saveCustomCategories();
+  }
+  rebuildTypeSelects(selId, name);
+  inp.style.display = 'none';
+  inp.value = '';
+  showToast(`已建立分類「${name}」`);
+}
+
+// ─── Filter Sidebar ──────────────────────────────────
+function openFilterSidebar() {
+  document.getElementById('filterSidebar').classList.add('open');
+  document.getElementById('filterBackdrop').classList.add('open');
+}
+function closeFilterSidebar() {
+  document.getElementById('filterSidebar').classList.remove('open');
+  document.getElementById('filterBackdrop').classList.remove('open');
+}
+
+function updateFilterToggleBtn() {
+  const btn = document.getElementById('filterToggleBtn');
+  const label = document.getElementById('filterToggleLabel');
+  const hasFilter = activeCategory !== 'all' || activeBrand !== 'all';
+  btn.classList.toggle('has-filter', hasFilter);
+  if (hasFilter) {
+    const parts = [];
+    if (activeCategory !== 'all') parts.push(activeCategory);
+    if (activeBrand !== 'all') parts.push(activeBrand);
+    label.textContent = parts.join('・');
+  } else {
+    label.textContent = '篩選';
+  }
+}
+
+// Swipe to open (swipe right from left edge) / close (swipe left on sidebar)
+(function() {
+  let touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFilterSidebar(); });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+    if (dy > 60) return; // mostly vertical, ignore
+    const sidebar = document.getElementById('filterSidebar');
+    if (!sidebar.classList.contains('open') && touchStartX < 24 && dx > 50) {
+      openFilterSidebar();
+    } else if (sidebar.classList.contains('open') && dx < -50) {
+      closeFilterSidebar();
+    }
+  }, { passive: true });
+})();
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── Init ────────────────────────────────────────────
+loadData();
+rebuildTypeSelects();
+renderCards();
+</script>
+</body>
+</html>

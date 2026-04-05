@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open /Users/yanghaohsiang/Desktop/傢俱目錄/index.html)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3 -:*)",
+      "Bash(osascript -e 'tell application \"\"Google Chrome\"\" to get URL of active tab of front window')",
+      "Bash(osascript:*)",
+      "Bash(curl -s \"https://www.googleapis.com/customsearch/v1?key=AIzaSyAhOiOcMDuJCqhIGGhb1MJJxcGlRDhDTQI&cx=753feada921574988&q=Eames+chair&num=1\")",
+      "Bash(screencapture -x /tmp/screen_now.png)",
+      "Bash(screencapture -x /tmp/screen2.png)",
+      "Bash(screencapture -x /tmp/screen3.png)",
+      "Bash(screencapture -x /tmp/screen5.png)",
+      "Bash(screencapture -x /tmp/screen6.png)",
+      "Bash(screencapture -x /tmp/screen7.png)",
+      "Bash(gcloud services:*)",
+      "Bash(open /Users/yanghaohsiang/Desktop/傢俱目錄/setup.html)",
+      "WebFetch(domain:jmplus-furniture.com)",
+      "Bash(curl -s \"https://jmplus-furniture.com/shop/sale/pre-order/page/\")",
+      "Bash(ipconfig getifaddr:*)",
+      "Bash(python3 -m http.server 8080)",
+      "Bash(git -C /Users/yanghaohsiang/Desktop/傢俱目錄 status)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh auth:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}
