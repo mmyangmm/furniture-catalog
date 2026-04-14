@@ -61,7 +61,8 @@
   material: string,   // 材質（獨立欄位，新增於 2026-04）
   size: string,       // 尺寸
   type: string,       // 見下方分類清單
-  price: string,      // 數字字串，NT$
+  price: string,      // 數字字串，NT$（外幣時為換算後NT$值）
+  priceOrig: string,  // 外幣原價字串，例如 "US$ 500"；純NTD時為空字串
   desc: string,
   image: string,      // base64 data URL（手動上傳）或 null
   imageUrl: string,   // 外部圖片 URL 或空字串
@@ -101,11 +102,16 @@
 - 先用**品名**判斷，品名無結果才用描述文字
 - **無法辨識回傳 `''`**，確認頁保持「請選擇」，使用者手動選
 
-### 價格擷取
-1. JSON-LD `offers.price`
-2. `meta[property="product:price:amount"]`
+### 價格擷取與外幣換算
+1. JSON-LD `offers.price` + `offers.priceCurrency`
+2. `meta[property="product:price:amount"]` + `meta[property="product:price:currency"]`
 3. `.woocommerce-Price-amount` span
-4. 頁面文字掃描：`NT$` / `NTD` / `TWD` / `$` / `元` / `円`（合理性過濾 100~10,000,000）
+4. DOM `$`/`＄` 附近文字（近 H1 優先）
+5. 頁面文字掃描：用 `matchAll` 迭代所有匹配，跳過超出範圍的值（修正 `$0`/`$1` 遮蔽問題）
+   - 符號 `€`/`£`/`¥`/`円` → 對應 EUR/GBP/JPY；`NT$`/`NTD`/`TWD`/`元` → TWD；`$`/`＄` 同聲明幣別或預設 NTD
+6. 若偵測到外幣：`priceOrig = "US$ 500"`，`price` 換算成 NT$（存整數，用於排序）
+   - 匯率（近似）：USD×32、EUR×35、GBP×41、JPY×0.22、HKD×4.1、SGD×24、CNY×4.4、AUD×21、CAD×23
+7. 顯示：`formatPrice(item)` → 外幣時顯示「US$ 500（約 NT$ 16,000）」；純NTD 顯示「NT$ 16,000」
 
 ### Claude AI 備援（`searchWithClaude`）
 - **API endpoint**：`https://api.anthropic.com/v1/messages`

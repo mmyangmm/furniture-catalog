@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>傢俱目錄</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root {
     --bg: #f7f5f2;
@@ -812,8 +813,43 @@
   .settings-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .settings-section-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
   .settings-section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+  .guide-block { margin-bottom: 18px; }
+  .guide-block:last-child { margin-bottom: 0; }
+  .guide-block-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .guide-block ul { margin: 0; padding-left: 18px; }
+  .guide-block li { font-size: 13px; color: var(--text-muted); line-height: 1.8; }
 
   /* Toast */
+  /* Google Drive button */
+  .drive-btn { font-size: 13px; padding: 7px 12px; transition: all 0.2s; }
+  .drive-btn.drive-connected { color: var(--green); border-color: var(--green); background: var(--green-light); }
+  .drive-btn.drive-syncing { color: #805ad5; border-color: #b794f4; }
+  .drive-btn.drive-error { color: #c53030; border-color: #fed7d7; }
+
+  /* Drive modal body */
+  .drive-status-row { display:flex; align-items:center; gap:10px; padding:14px 0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .drive-avatar { width:38px; height:38px; border-radius:50%; background:var(--accent-light); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .drive-status-name { font-weight:600; font-size:14px; }
+  .drive-status-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .drive-actions { display:flex; flex-direction:column; gap:8px; }
+  .drive-actions .btn { justify-content:center; }
+  .drive-setup { font-size:13px; color:var(--text-muted); margin-bottom:12px; line-height:1.6; }
+  .drive-setup a { color:var(--accent); }
+  .drive-client-row { display:flex; gap:8px; margin-bottom:4px; }
+  .drive-client-row input { flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:13px; background:var(--bg); }
+  @keyframes drive-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .drive-syncing-icon { display:inline-block; animation: drive-spin 1.5s linear infinite; }
+
+  /* Read-only view mode */
+  .view-mode .header-actions .btn-ai,
+  .view-mode .header-actions .btn-primary,
+  .view-mode .card-actions { display: none !important; }
+  .view-banner {
+    background: #ebf8ff; border-bottom: 1px solid #bee3f8;
+    padding: 10px 40px; font-size: 13px; color: #2b6cb0;
+    display: flex; align-items: center; gap: 8px;
+  }
+
   .toast {
     position: fixed;
     bottom: 30px;
@@ -857,6 +893,7 @@
     </div>
   </div>
   <div class="header-actions">
+    <button class="btn btn-ghost drive-btn" id="driveSyncBtn" onclick="openDriveModal()" title="Google Drive 同步">☁ Drive</button>
     <button class="btn btn-ai" onclick="openAiSearchModal()">
       🔗 <span>網址新增</span>
     </button>
@@ -866,6 +903,9 @@
     <button class="btn-icon" onclick="openSettings()" title="設定">⚙️</button>
   </div>
 </header>
+<div class="view-banner" id="viewBanner" style="display:none">
+  👁 你正在瀏覽共享目錄（唯讀）。<a id="viewBannerLink" href="#" style="color:#2b6cb0;font-weight:600;margin-left:4px">建立我的目錄 →</a>
+</div>
 
 <!-- Filter Backdrop -->
 <div class="filter-backdrop" id="filterBackdrop" onclick="closeFilterSidebar()"></div>
@@ -1030,45 +1070,55 @@
 
       <!-- Panel 1: URL input -->
       <div class="ai-panel active" id="aiPanel1">
-        <div class="ai-keyword-wrap">
-          <input
-            class="ai-keyword-input"
-            id="aiUrlInput"
-            type="url"
-            placeholder="貼入產品頁網址，例：https://www.ikea.com/…"
-            onkeydown="if(event.key==='Enter') startAiSearch()"
-          >
-          <button class="ai-search-btn" onclick="startAiSearch()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="ai-keyword-wrap">
+            <input class="ai-keyword-input" id="aiUrlInput0" type="url" placeholder="網址 1（必填）" onkeydown="if(event.key==='Enter') startAiSearch()">
+          </div>
+          <div class="ai-keyword-wrap">
+            <input class="ai-keyword-input" id="aiUrlInput1" type="url" placeholder="網址 2（選填）" onkeydown="if(event.key==='Enter') startAiSearch()">
+          </div>
+          <div class="ai-keyword-wrap">
+            <input class="ai-keyword-input" id="aiUrlInput2" type="url" placeholder="網址 3（選填）" onkeydown="if(event.key==='Enter') startAiSearch()">
+          </div>
+          <button class="ai-search-btn" style="align-self:flex-end;padding:9px 20px;border-radius:var(--radius-sm);width:auto" onclick="startAiSearch()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>開始搜尋
           </button>
         </div>
-        <div class="ai-hint">🔗 支援 IKEA、品牌官網、電商平台等產品頁，自動擷取品名、價格、圖片等資訊</div>
+        <div class="ai-hint">🔗 一次最多三個網址，支援 IKEA、品牌官網、電商平台等產品頁</div>
       </div>
 
       <!-- Panel 2: Loading -->
       <div class="ai-panel" id="aiPanel2">
         <div class="ai-loading">
           <div class="ai-spinner"></div>
-          <div class="ai-loading-title">正在擷取產品資訊…</div>
+          <div class="ai-loading-title" id="aiLoadingTitle">正在擷取產品資訊…</div>
           <div class="ai-loading-sub" id="aiLoadingKeyword"></div>
-          <div class="ai-loading-steps">
-            <div class="ai-loading-step" id="loadStep1">🌐 連線至產品頁</div>
-            <div class="ai-loading-step" id="loadStep2">📄 讀取頁面內容</div>
-            <div class="ai-loading-step" id="loadStep3">📋 解析產品資訊</div>
-            <div class="ai-loading-step" id="loadStep4">✨ AI 補充搜尋</div>
-          </div>
         </div>
       </div>
 
       <!-- Panel 3: Confirm -->
       <div class="ai-panel" id="aiPanel3">
         <div id="aiConfirmContent"></div>
-        <div class="form-actions" style="border-top:none;padding-top:0;margin-top:0">
+        <div class="form-actions" style="border-top:none;padding-top:0;margin-top:0" id="aiConfirmActions">
           <button class="btn btn-ghost" onclick="goToAiPanel(1)">↩ 重新貼入</button>
-          <button class="btn btn-primary" onclick="confirmAiSave()">✓ 確認儲存</button>
+          <button class="btn btn-ghost" id="aiBtnSkip" onclick="aiSkipCurrent()" style="display:none">略過</button>
+          <button class="btn btn-primary" id="aiBtnSave" onclick="confirmAiSave()">✓ 確認儲存</button>
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Drive Modal -->
+<div class="modal-overlay" id="driveModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">☁ Google Drive 同步</div>
+      <button class="modal-close" onclick="closeDriveModal()">✕</button>
+    </div>
+    <div class="modal-body" id="driveModalBody">
+      <!-- content rendered by renderDriveModal() -->
     </div>
   </div>
 </div>
@@ -1092,11 +1142,91 @@
       <button class="modal-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="modal-body">
+
+      <div class="settings-section">
+        <div class="settings-section-title">📖 使用說明</div>
+        <div style="margin-top:12px">
+
+          <div class="guide-block">
+            <div class="guide-block-title">🔗 網址新增</div>
+            <ul>
+              <li>點擊右上角「🔗 網址新增」按鈕開啟視窗</li>
+              <li>貼入一至三個產品頁網址（第二、三個選填），點「開始搜尋」</li>
+              <li>系統自動擷取品名、價格、材質、尺寸、圖片等資訊</li>
+              <li>確認頁可直接修改任何欄位，空白表示網頁未提供，請手動填入</li>
+              <li>多個網址會逐一確認，可選擇「略過」或「儲存，下一個」</li>
+            </ul>
+          </div>
+
+          <div class="guide-block">
+            <div class="guide-block-title">＋ 手動新增</div>
+            <ul>
+              <li>點擊「＋ 手動新增」按鈕開啟表單</li>
+              <li>可點擊或拖曳圖片區域上傳產品照片</li>
+              <li>填寫品名（必填）、品牌、類型（必填）等欄位後按「儲存品項」</li>
+              <li>只有叉叉或「取消」按鈕才會關閉視窗，點外部不會關閉</li>
+            </ul>
+          </div>
+
+          <div class="guide-block">
+            <div class="guide-block-title">🔍 搜尋與篩選</div>
+            <ul>
+              <li>頂部搜尋欄可搜尋品名、品牌、材質、說明等文字</li>
+              <li>點「篩選」按鈕（或從螢幕左緣向右滑）開啟分類側邊欄</li>
+              <li>可依傢俱類型或品牌篩選，選完後自動收起</li>
+              <li>右側排序選單可依價格、品牌、類別、年份等排序</li>
+            </ul>
+          </div>
+
+          <div class="guide-block">
+            <div class="guide-block-title">🗂 傢俱分類</div>
+            <ul>
+              <li>預設分類：沙發、椅子、桌子、床架、層架、收納、燈具、地毯、戶外傢俱、裝飾品、其他</li>
+              <li>新增品項時，在類型下拉選單選「＋ 自訂分類...」可輸入新分類名稱</li>
+              <li>輸入名稱後按 Enter 即建立，自動選取該分類</li>
+            </ul>
+          </div>
+
+          <div class="guide-block">
+            <div class="guide-block-title">📋 品項詳情與管理</div>
+            <ul>
+              <li>點擊任意卡片開啟詳情視窗，顯示所有欄位與來源網址</li>
+              <li>有來源網址的品項可點「🖼 顯示產品照片」抓取原頁面最多 10 張照片</li>
+              <li>詳情視窗內可點「✏️ 編輯」修改或「🗑 刪除」移除品項</li>
+              <li>滑鼠移到卡片右上角也可直接編輯或刪除</li>
+            </ul>
+          </div>
+
+          <div class="guide-block">
+            <div class="guide-block-title">🤖 Claude AI 搜尋備援</div>
+            <ul>
+              <li>網址擷取失敗時，若已設定 Anthropic API Key，系統會自動改用 Claude AI 搜尋</li>
+              <li>在下方「API Key」欄位貼入金鑰即可啟用</li>
+              <li>API Key 存於本機瀏覽器，不會上傳至任何伺服器</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">🤖 Anthropic API Key</div>
+        <div class="settings-section-desc">設定後，網址擷取失敗時會自動改用 Claude AI 搜尋補充資訊。Key 僅存於本機瀏覽器。</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="settingsApiKey" type="password" placeholder="sk-ant-..." autocomplete="off"
+            style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">
+          <button class="btn btn-ghost" onclick="saveAnthropicKey()">儲存</button>
+        </div>
+        <div id="apiKeyStatus" style="font-size:12px;color:var(--text-muted)"></div>
+      </div>
+
       <div class="settings-section">
         <div class="settings-section-title">資料管理</div>
-        <div class="settings-section-desc">匯出目前所有品項資料（JSON 格式），或清空全部資料。</div>
-        <div style="display:flex;gap:8px">
+        <div class="settings-section-desc">匯出目前所有品項資料（JSON 格式），或匯入別人分享的 JSON 檔案（會與現有資料合併，重複 ID 以匯入的為準）。</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost" onclick="exportData()">📤 匯出資料</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('importFileInput').click()">📥 匯入 JSON</button>
+          <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="importData(this)">
           <button class="btn btn-ghost" style="color:#c53030;border-color:#fed7d7" onclick="clearAllData()">🗑 清空全部</button>
         </div>
       </div>
@@ -1128,7 +1258,10 @@ function loadData() {
   try { items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { items = []; }
   try { customCategories = JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY) || '[]'); } catch(e) { customCategories = []; }
 }
-function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  scheduleDriveSave();
+}
 function saveCustomCategories() { localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(customCategories)); }
 
 function addCustomCategory(name) {
@@ -1233,7 +1366,7 @@ function renderCards() {
   }
 
   grid.innerHTML = filtered.map(item => {
-    const price = item.price ? `NT$ ${Number(item.price).toLocaleString()}` : '—';
+    const price = formatPrice(item) || '—';
     const imgSrc = item.image || item.imageUrl;
     const imgHtml = imgSrc
       ? `<img src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
@@ -1364,6 +1497,7 @@ function saveItem() {
   }
   if (!name) { showToast('請填寫品名'); return; }
   if (!type) { showToast('請選擇傢俱類型'); return; }
+  const existing = editingId ? items.find(i => i.id === editingId) : null;
   const data = {
     id: editingId || Date.now().toString(),
     name,
@@ -1374,11 +1508,12 @@ function saveItem() {
     size: document.getElementById('fSize').value.trim(),
     type,
     price: document.getElementById('fPrice').value.trim(),
+    priceOrig: existing?.priceOrig || '',
     desc: document.getElementById('fDesc').value.trim(),
     image: pendingImageData || null,
-    imageUrl: editingId ? (items.find(i => i.id === editingId)?.imageUrl || '') : '',
-    sourceUrl: editingId ? (items.find(i => i.id === editingId)?.sourceUrl || '') : '',
-    createdAt: editingId ? (items.find(i => i.id === editingId)?.createdAt || Date.now()) : Date.now(),
+    imageUrl: existing?.imageUrl || '',
+    sourceUrl: existing?.sourceUrl || '',
+    createdAt: existing?.createdAt || Date.now(),
   };
   if (editingId) {
     const idx = items.findIndex(i => i.id === editingId);
@@ -1402,7 +1537,7 @@ function deleteItem(id) {
 function openDetail(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const price = item.price ? `NT$ ${Number(item.price).toLocaleString()}` : '未提供';
+  const price = formatPrice(item) || '未提供';
   const imgSrc = item.image || item.imageUrl;
   document.getElementById('detailBody').innerHTML = `
     ${imgSrc ? `<img class="detail-img" src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none'">` : ''}
@@ -1547,6 +1682,7 @@ function saveAnthropicKey() {
 
 function openSettings() {
   document.getElementById('settingsModal').classList.add('open');
+  // Anthropic API Key
   const key = getAnthropicKey();
   document.getElementById('settingsApiKey').value = key ? '••••••••' + key.slice(-6) : '';
   const status = document.getElementById('apiKeyStatus');
@@ -1569,16 +1705,311 @@ function clearAllData() {
   items = []; saveData(); renderCards(); showToast('已清空全部資料');
 }
 
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = ''; // reset so same file can be re-imported
+  const reader = new FileReader();
+  reader.onload = e => {
+    let imported;
+    try { imported = JSON.parse(e.target.result); } catch { showToast('檔案格式錯誤，請選擇有效的 JSON 檔案'); return; }
+    const list = Array.isArray(imported) ? imported : imported.items;
+    if (!Array.isArray(list) || !list.length) { showToast('找不到品項資料'); return; }
+    // Merge: imported items overwrite existing ones with same id; new items prepended
+    const existingMap = new Map(items.map(i => [i.id, i]));
+    let added = 0, updated = 0;
+    for (const item of list) {
+      if (!item.id || !item.name) continue;
+      existingMap.has(item.id) ? updated++ : added++;
+      existingMap.set(item.id, item);
+    }
+    items = [...existingMap.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    saveData(); renderCards();
+    showToast(`匯入完成：新增 ${added} 件，更新 ${updated} 件`);
+  };
+  reader.readAsText(file);
+}
+
+// ─── Google Drive Sync ───────────────────────────────
+const DRIVE_CLIENT_ID_KEY = 'furniture_drive_client_id';
+const DRIVE_FILE_ID_KEY   = 'furniture_drive_file_id';
+const DRIVE_FILE_NAME     = 'furniture_catalog.json';
+
+let driveAccessToken = null;
+let driveUserEmail   = '';
+let driveFileId      = localStorage.getItem(DRIVE_FILE_ID_KEY) || null;
+let driveSaveTimer   = null;
+let driveState       = 'disconnected'; // disconnected | syncing | connected | error
+
+function getDriveClientId() { return localStorage.getItem(DRIVE_CLIENT_ID_KEY) || ''; }
+
+// ── Modal open / close ────────────────────────────────
+function openDriveModal() {
+  renderDriveModal();
+  document.getElementById('driveModal').classList.add('open');
+}
+function closeDriveModal() {
+  document.getElementById('driveModal').classList.remove('open');
+}
+
+function renderDriveModal() {
+  const clientId = getDriveClientId();
+  const body = document.getElementById('driveModalBody');
+  if (!body) return;
+
+  if (driveState === 'connected') {
+    body.innerHTML = `
+      <div class="drive-status-row">
+        <div class="drive-avatar">✓</div>
+        <div>
+          <div class="drive-status-name" style="color:var(--green)">已連線 Google Drive</div>
+          <div class="drive-status-sub">${escHtml(driveUserEmail)}</div>
+        </div>
+      </div>
+      <div class="drive-actions">
+        <button class="btn btn-ghost" onclick="shareDrive()">🔗 複製分享連結</button>
+        <button class="btn btn-ghost" onclick="driveSyncNow()">↻ 立即同步</button>
+        <button class="btn btn-ghost" style="color:#c53030;border-color:#fed7d7" onclick="driveSignOut()">登出</button>
+      </div>`;
+  } else if (driveState === 'syncing') {
+    body.innerHTML = `
+      <div class="drive-status-row">
+        <div class="drive-avatar"><span class="drive-syncing-icon">↻</span></div>
+        <div>
+          <div class="drive-status-name">同步中…</div>
+          <div class="drive-status-sub">${escHtml(driveUserEmail)}</div>
+        </div>
+      </div>`;
+  } else if (driveState === 'error') {
+    body.innerHTML = `
+      <div class="drive-status-row">
+        <div class="drive-avatar" style="color:#c53030">⚠</div>
+        <div>
+          <div class="drive-status-name" style="color:#c53030">同步失敗</div>
+          <div class="drive-status-sub">請重新登入或檢查網路連線</div>
+        </div>
+      </div>
+      <div class="drive-actions">
+        <button class="btn btn-primary" onclick="driveSignIn()">重新登入</button>
+        <button class="btn btn-ghost" style="color:#c53030;border-color:#fed7d7" onclick="driveSignOut()">登出</button>
+      </div>`;
+  } else {
+    // disconnected — show sign-in, and Client ID setup if not yet configured
+    body.innerHTML = `
+      <div class="drive-setup">
+        連線後目錄自動備份至你的 Google Drive，並可產生分享連結讓他人唯讀瀏覽。
+      </div>
+      <div class="drive-actions">
+        <button class="btn btn-primary" style="font-size:14px;padding:10px" onclick="driveSignIn()">
+          <img src="https://www.google.com/favicon.ico" width="16" height="16" style="vertical-align:middle;margin-right:8px">登入 Google 帳號
+        </button>
+      </div>
+      ${clientId ? '' : `
+      <details style="margin-top:20px;font-size:12px;color:var(--text-muted)">
+        <summary style="cursor:pointer;user-select:none">⚙ 首次設定：輸入 OAuth Client ID</summary>
+        <div style="margin-top:10px;line-height:1.7">
+          至 <a href="https://console.cloud.google.com" target="_blank" style="color:var(--accent)">Google Cloud Console</a>
+          建立專案 → 啟用 Drive API → 建立 OAuth 用戶端 ID（網路應用程式）→ 貼入下方：
+        </div>
+        <div class="drive-client-row" style="margin-top:8px">
+          <input id="driveClientIdInput" type="text" placeholder="...apps.googleusercontent.com">
+          <button class="btn btn-ghost" onclick="saveDriveClientIdAndSignIn()">儲存並登入</button>
+        </div>
+      </details>`}`;
+  }
+}
+
+function saveDriveClientId() {
+  const val = (document.getElementById('driveClientIdInput')?.value || '').trim();
+  if (!val) { showToast('請貼入 Client ID'); return; }
+  localStorage.setItem(DRIVE_CLIENT_ID_KEY, val);
+}
+
+function saveDriveClientIdAndSignIn() {
+  saveDriveClientId();
+  driveSignIn();
+}
+
+// ── Sign in / out ─────────────────────────────────────
+function driveSignIn() {
+  const clientId = getDriveClientId();
+  if (!clientId) {
+    showToast('請先展開下方設定輸入 Client ID');
+    return;
+  }
+  if (typeof google === 'undefined') { showToast('Google 服務載入中，請稍後再試'); return; }
+
+  google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+    callback: async response => {
+      if (response.error) { showToast('登入失敗：' + response.error); return; }
+      driveAccessToken = response.access_token;
+
+      // Fetch user email
+      try {
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${driveAccessToken}` } });
+        const u = await r.json();
+        driveUserEmail = u.email || '';
+      } catch {}
+
+      setDriveState('syncing');
+      try {
+        await loadFromDrive();
+        setDriveState('connected');
+        showToast('✓ 已連線 Google Drive');
+      } catch (e) {
+        setDriveState('error');
+        showToast('Drive 載入失敗：' + e.message);
+      }
+    },
+  }).requestAccessToken();
+}
+
+function driveSignOut() {
+  if (driveAccessToken && typeof google !== 'undefined') {
+    google.accounts.oauth2.revoke(driveAccessToken);
+  }
+  driveAccessToken = null;
+  driveUserEmail = '';
+  setDriveState('disconnected');
+  closeDriveModal();
+  showToast('已登出 Google Drive');
+}
+
+function setDriveState(state) {
+  driveState = state;
+  // Update header button
+  const btn = document.getElementById('driveSyncBtn');
+  if (btn) {
+    const labels = { disconnected: '☁ Drive', syncing: '↻ 同步中', connected: '✓ Drive', error: '⚠ Drive' };
+    btn.textContent = labels[state] || '☁ Drive';
+    btn.className = `btn btn-ghost drive-btn${state !== 'disconnected' ? ' drive-' + state : ''}`;
+  }
+  // Refresh modal if open
+  if (document.getElementById('driveModal')?.classList.contains('open')) renderDriveModal();
+}
+
+async function driveSyncNow() {
+  setDriveState('syncing');
+  try { await saveToDriveNow(); setDriveState('connected'); showToast('同步完成'); }
+  catch (e) { setDriveState('error'); showToast('同步失敗：' + e.message); }
+}
+
+// ── Load / save ───────────────────────────────────────
+async function loadFromDrive() {
+  if (!driveFileId) {
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name%3D'${DRIVE_FILE_NAME}'+and+trashed%3Dfalse&fields=files(id)`,
+      { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+    );
+    const d = await r.json();
+    if (d.files?.length) {
+      driveFileId = d.files[0].id;
+      localStorage.setItem(DRIVE_FILE_ID_KEY, driveFileId);
+    }
+  }
+
+  if (!driveFileId) { await saveToDriveNow(); return; }
+
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+  );
+  if (!res.ok) {
+    driveFileId = null;
+    localStorage.removeItem(DRIVE_FILE_ID_KEY);
+    await saveToDriveNow();
+    return;
+  }
+
+  const data = await res.json();
+  items = Array.isArray(data) ? data : (data.items || []);
+  if (!Array.isArray(data) && Array.isArray(data.customCategories)) {
+    customCategories = data.customCategories;
+    saveCustomCategories();
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  renderCards();
+}
+
+async function saveToDriveNow() {
+  if (!driveAccessToken) return;
+  const blob = new Blob([JSON.stringify({ items, customCategories })], { type: 'application/json' });
+
+  if (driveFileId) {
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' }, body: blob }
+    );
+    if (!res.ok) throw new Error(await res.text());
+  } else {
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({ name: DRIVE_FILE_NAME, mimeType: 'application/json' })], { type: 'application/json' }));
+    form.append('file', blob);
+    const res = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST', headers: { Authorization: `Bearer ${driveAccessToken}` }, body: form }
+    );
+    if (!res.ok) throw new Error(await res.text());
+    driveFileId = (await res.json()).id;
+    localStorage.setItem(DRIVE_FILE_ID_KEY, driveFileId);
+  }
+}
+
+function scheduleDriveSave() {
+  if (!driveAccessToken) return;
+  clearTimeout(driveSaveTimer);
+  driveSaveTimer = setTimeout(async () => {
+    setDriveState('syncing');
+    try { await saveToDriveNow(); setDriveState('connected'); }
+    catch { setDriveState('error'); }
+  }, 2000);
+}
+
+// ── Share ─────────────────────────────────────────────
+async function shareDrive() {
+  if (!driveAccessToken || !driveFileId) { showToast('請先連線 Google Drive'); return; }
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${driveFileId}/permissions`,
+    { method: 'POST', headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }
+  );
+  if (!res.ok) { showToast('無法建立分享連結，請重試'); return; }
+  const shareUrl = `${location.href.split('?')[0]}?view=${driveFileId}`;
+  await navigator.clipboard.writeText(shareUrl).catch(() => prompt('複製此分享連結：', shareUrl));
+  showToast('分享連結已複製！');
+}
+
+// ── Shared catalog view (read-only) ──────────────────
+async function loadSharedCatalog(fileId) {
+  document.body.classList.add('view-mode');
+  const banner = document.getElementById('viewBanner');
+  if (banner) banner.style.display = '';
+  const bannerLink = document.getElementById('viewBannerLink');
+  if (bannerLink) bannerLink.href = location.pathname;
+
+  try {
+    const res = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    items = Array.isArray(data) ? data : (data.items || []);
+    if (!Array.isArray(data) && Array.isArray(data.customCategories)) customCategories = data.customCategories;
+    document.querySelector('.logo span').textContent = '共享目錄（唯讀）';
+    renderCards();
+  } catch {
+    showToast('無法載入共享目錄，連結可能已失效或尚未公開');
+  }
+}
+
 // ─── AI Smart Search ─────────────────────────────────
-let aiCurrentStep = 1;
+const AI_URL_COUNT = 3;
 let aiFoundData = null;
 
 function openAiSearchModal() {
-
   goToAiPanel(1);
-  document.getElementById('aiUrlInput').value = '';
+  Array.from({length: AI_URL_COUNT}, (_,i) => i).forEach(i => { const el = document.getElementById(`aiUrlInput${i}`); if (el) el.value = ''; });
   document.getElementById('aiModal').classList.add('open');
-  setTimeout(() => document.getElementById('aiUrlInput').focus(), 200);
+  setTimeout(() => document.getElementById('aiUrlInput0').focus(), 200);
 }
 
 function closeAiModal() {
@@ -1587,7 +2018,6 @@ function closeAiModal() {
 }
 
 function goToAiPanel(n) {
-  aiCurrentStep = n;
   [1,2,3].forEach(i => {
     document.getElementById(`aiPanel${i}`).classList.toggle('active', i === n);
     const ind = document.getElementById(`aiStep${i}Ind`);
@@ -1635,6 +2065,8 @@ function inferType(name, fallbackText) {
   // Prioritise product name; only fall back to broader text if name gives no match
   for (const text of [name, fallbackText].filter(Boolean)) {
     const t = text.toLowerCase();
+    // Compound lighting terms must come before 桌/床/壁 to avoid mis-classification
+    if (/桌燈|台燈|檯燈|壁燈|吊燈|落地燈|floor.?lamp|table.?lamp|desk.?lamp|wall.?lamp|pendant.?light|ceiling.?light/.test(t)) return '燈具';
     if (/沙發|sofa|couch|loveseat|sectional/.test(t)) return '沙發';
     if (/層架|shelving.?unit|shelf.?unit|open.?shelf|etagere|étagère/.test(t)) return '層架';
     if (/椅|chair|stool|armchair|recliner|rocker/.test(t)) return '椅子';
@@ -1645,37 +2077,43 @@ function inferType(name, fallbackText) {
     if (/地毯|rug|carpet/.test(t)) return '地毯';
     if (/戶外|outdoor|garden|patio/.test(t)) return '戶外傢俱';
     if (/裝飾|deco|vase|candle|mirror|frame|掛畫|畫框|花瓶/.test(t)) return '裝飾品';
-    if (text === name) continue; // name gave no match, try fallback
+    if (text === name) continue;
     break;
   }
   return ''; // leave blank so user can select manually
 }
 
+// ── Currency conversion (approximate rates to NTD) ───────────────────
+const FX = { USD: 32, EUR: 35, GBP: 41, JPY: 0.22, HKD: 4.1, SGD: 24, CNY: 4.4, AUD: 21, CAD: 23 };
+const CURRENCY_SYMBOLS = { USD: 'US$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$', SGD: 'S$', CNY: 'CN¥', AUD: 'A$', CAD: 'CA$' };
+
 // ── URL-based product page scraper ───────────────────────────────────
 async function fetchViaProxy(url) {
-  const proxies = [
-    async () => {
-      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+  const enc = encodeURIComponent(url);
+  const attempt = async fn => {
+    const result = await fn();
+    if (!result) throw new Error('empty');
+    return result;
+  };
+  return Promise.any([
+    attempt(async () => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${enc}`);
       if (!r.ok) throw new Error();
       const d = await r.json();
       if (!d.contents) throw new Error();
       return d.contents;
-    },
-    async () => {
-      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+    }),
+    attempt(async () => {
+      const r = await fetch(`https://corsproxy.io/?${enc}`);
       if (!r.ok) throw new Error();
-      return await r.text();
-    },
-    async () => {
-      const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+      return r.text();
+    }),
+    attempt(async () => {
+      const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${enc}`);
       if (!r.ok) throw new Error();
-      return await r.text();
-    },
-  ];
-  for (const proxy of proxies) {
-    try { return await proxy(); } catch {}
-  }
-  throw new Error('無法取得頁面，所有代理均失敗，請稍後再試');
+      return r.text();
+    }),
+  ]).catch(() => { throw new Error('無法取得頁面，所有代理均失敗，請稍後再試'); });
 }
 
 async function searchWithUrl(url) {
@@ -1753,34 +2191,92 @@ async function searchWithUrl(url) {
 
   // ── Price ──
   let price = 0;
+  // Detect declared currency (e.g. USD, EUR, JPY, TWD)
+  let currency = (
+    product?.offers?.priceCurrency ||
+    product?.offers?.[0]?.priceCurrency ||
+    doc.querySelector('meta[property="product:price:currency"]')?.content ||
+    ''
+  ).toUpperCase();
   const offerPrice = product?.offers?.price ?? product?.offers?.[0]?.price;
   if (offerPrice) price = parseInt(offerPrice) || 0;
   if (!price) price = parseInt(meta('meta[property="product:price:amount"]')) || 0;
+  // Helper: parse a price string and validate range
+  const parsePrice = s => {
+    const n = parseInt((s || '').replace(/[^\d]/g, '')) || 0;
+    return (n >= 100 && n <= 10000000) ? n : 0;
+  };
+
   if (!price) {
-    // WooCommerce: <span class="woocommerce-Price-amount">
+    // 1. WooCommerce price span
     const wcPrice = doc.querySelector('.woocommerce-Price-amount');
-    if (wcPrice) {
-      const n = parseInt(wcPrice.textContent.replace(/[^\d]/g, '')) || 0;
-      if (n >= 100 && n <= 10000000) price = n;
+    if (wcPrice) price = parsePrice(wcPrice.textContent);
+  }
+  if (!price) {
+    // 2. DOM elements whose text contains $ or ＄ — most reliable for product pages
+    //    Search near H1 first, then broaden to known price selectors
+    const dollarRe = /[$＄]\s*([\d,]+)/;
+    const h1 = doc.querySelector('h1');
+    const searchRoots = [
+      h1?.nextElementSibling,
+      h1?.parentElement,
+      h1?.parentElement?.parentElement,
+      doc.querySelector('.product, [class*="product-summary"], [class*="entry-summary"]'),
+    ].filter(Boolean);
+
+    for (const root of searchRoots) {
+      // Walk immediate children first (price is usually a direct sibling of h1)
+      for (const el of root.querySelectorAll('*')) {
+        // Only look at leaf-ish elements (skip large containers)
+        if (el.children.length > 4) continue;
+        const t = el.textContent.trim();
+        const m = t.match(dollarRe);
+        if (m) {
+          const candidate = parseInt(m[1].replace(/,/g, '')) || 0;
+          if (candidate >= 100 && candidate <= 10000000) { price = candidate; break; }
+        }
+      }
+      if (price) break;
     }
   }
   if (!price) {
-    // Scan page text for price patterns with $ / NT$ / TWD / 元 / 円
-    const bodyText = doc.body?.textContent || '';
-    const pricePatterns = [
-      /NT\$\s*([\d,]+)/i,
-      /NTD\s*([\d,]+)/i,
-      /TWD\s*([\d,]+)/i,
-      /\$\s*([\d,]+)/,
-      /([\d,]+)\s*元/,
-      /([\d,]+)\s*円/,
-    ];
-    for (const re of pricePatterns) {
-      const m = bodyText.match(re);
-      if (m) {
-        const candidate = parseInt(m[1].replace(/,/g, '')) || 0;
-        if (candidate >= 100 && candidate <= 10000000) { price = candidate; break; }
+    // 3. Price-class DOM elements near product area
+    const h1 = doc.querySelector('h1');
+    const priceSelectors = ['[class*="price"]', '[class*="Price"]', '[itemprop="price"]', '[class*="amount"]'];
+    const roots = [h1?.parentElement, h1?.parentElement?.parentElement, doc.querySelector('.product'), doc.querySelector('[class*="product"]')].filter(Boolean);
+    for (const root of roots) {
+      for (const sel of priceSelectors) {
+        const el = root.querySelector(sel);
+        if (el) { price = parsePrice(el.textContent); if (price) break; }
       }
+      if (price) break;
+    }
+  }
+  if (!price) {
+    // 4. Text scan fallback — iterate all matches (matchAll) to skip out-of-range values
+    const bodyText = (doc.body?.textContent || '').slice(0, 6000);
+    // [regex, implied-currency-if-not-already-set]
+    const scanPatterns = [
+      [/[$＄]\s*([\d,]+)/g,      null   ],  // $ ambiguous → keep declared currency or assume NTD
+      [/NT\$\s*([\d,]+)/gi,     'TWD'  ],
+      [/NTD\s*([\d,]+)/gi,      'TWD'  ],
+      [/TWD\s*([\d,]+)/gi,      'TWD'  ],
+      [/€\s*([\d,]+)/g,         'EUR'  ],
+      [/£\s*([\d,]+)/g,         'GBP'  ],
+      [/¥\s*([\d,]+)/g,         'JPY'  ],
+      [/([\d,]+)\s*元/g,         'TWD'  ],
+      [/([\d,]+)\s*円/g,         'JPY'  ],
+    ];
+    for (const [re, impliedCur] of scanPatterns) {
+      for (const m of bodyText.matchAll(re)) {
+        const candidate = parseInt(m[1].replace(/,/g, '')) || 0;
+        if (candidate >= 100 && candidate <= 10000000) {
+          price = candidate;
+          if (impliedCur && !currency) currency = impliedCur;
+          break;
+        }
+      }
+      if (price) break;
     }
   }
 
@@ -1832,7 +2328,7 @@ async function searchWithUrl(url) {
   }
 
   // ── Color & Material (separate) ──
-  let rawColor    = extractSpec(/^(?:顏色|color|色彩|色)$/i);
+  const rawColor  = ''; // left blank for user to fill
   let rawMaterial = product?.material || extractSpec(/^(?:材質|material|fabric|素材|材料)$/i);
 
   // ── Size / Dimensions ──
@@ -1851,6 +2347,15 @@ async function searchWithUrl(url) {
   const fullText = rawName + ' ' + rawDesc + ' ' + url;
   let year = product?.releaseDate ? (parseInt(product.releaseDate) || 0) : 0;
 
+  // Compute priceOrig: if currency is a known foreign currency, store original and convert to NTD
+  let priceOrig = '';
+  const isForeignCurrency = currency && !['TWD', 'NTD'].includes(currency) && FX[currency];
+  if (isForeignCurrency && price > 0) {
+    const sym = CURRENCY_SYMBOLS[currency] || currency;
+    priceOrig = `${sym} ${price.toLocaleString()}`;
+    price = Math.round(price * FX[currency]);
+  }
+
   return {
     name:     cleanText(rawName).slice(0, 120),
     brand:    cleanText(rawBrand).slice(0, 80),
@@ -1860,6 +2365,7 @@ async function searchWithUrl(url) {
     size:     cleanText(rawSize).slice(0, 80),
     type:     inferType(rawName, rawDesc),
     price,
+    priceOrig,
     desc:     cleanText(rawDesc).slice(0, 250),
     imageUrl: typeof rawImage === 'string' ? rawImage.trim() : '',
   };
@@ -1955,7 +2461,7 @@ async function searchWithClaude(keyword) {
   "name": "完整品名（必填）",
   "brand": "品牌名稱，找不到填空字串",
   "year": 推出年份整數或0,
-  "color": "主要顏色，找不到填空字串",
+  "color": "",
   "material": "主要材質，找不到填空字串",
   "type": "沙發/椅子/桌子/床架/層架/收納/燈具/地毯/戶外傢俱/裝飾品/其他 其中一項",
   "price": 新台幣整數或0,
@@ -2005,50 +2511,83 @@ async function searchWithClaude(keyword) {
   };
 }
 
+// ── Multi-URL queue state ─────────────────────────────────────────────
+let aiQueue = [];      // array of { url, result|error }
+let aiQueueIndex = 0;
+
 // ── Main entry point ─────────────────────────────────────────────────
 async function startAiSearch() {
-  const url = document.getElementById('aiUrlInput').value.trim();
-  if (!url) { showToast('請貼入產品頁網址'); return; }
-  if (!/^https?:\/\//i.test(url)) { showToast('請輸入完整網址（以 http:// 或 https:// 開頭）'); return; }
+  const rawUrls = Array.from({length: AI_URL_COUNT}, (_,i) =>
+    (document.getElementById(`aiUrlInput${i}`)?.value || '').trim()
+  ).filter(u => u);
 
-  const existing = items.find(i => i.sourceUrl === url);
-  if (existing) {
-    showToast(`「${existing.name || '此品項'}」已新增過，可在目錄中找到`);
+  if (!rawUrls.length) { showToast('請貼入至少一個產品頁網址'); return; }
+
+  const invalid = rawUrls.find(u => !/^https?:\/\//i.test(u));
+  if (invalid) { showToast('請輸入完整網址（以 http:// 或 https:// 開頭）'); return; }
+
+  // Check duplicates
+  const skipped = [];
+  const urls = rawUrls.filter(u => {
+    const ex = items.find(i => i.sourceUrl === u);
+    if (ex) { skipped.push(ex.name || u); return false; }
+    return true;
+  });
+  if (skipped.length) showToast(`已略過已新增的品項：${skipped.join('、')}`);
+  if (!urls.length) return;
+
+  goToAiPanel(2);
+  document.getElementById('aiLoadingTitle').textContent = `正在擷取 ${urls.length} 個產品頁…`;
+  document.getElementById('aiLoadingKeyword').textContent = urls.map(u => new URL(u).hostname).join('、');
+
+  // Process URLs sequentially to avoid flooding proxies with concurrent requests
+  aiQueue = [];
+  aiQueueIndex = 0;
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    document.getElementById('aiLoadingTitle').textContent = `正在擷取第 ${i + 1} / ${urls.length} 個…`;
+    document.getElementById('aiLoadingKeyword').textContent = new URL(url).hostname;
+    try {
+      let found;
+      try {
+        found = await searchWithUrl(url);
+        if (!found.type) found.type = inferType(found.name, found.desc);
+      } catch (urlErr) {
+        if (!getAnthropicKey()) throw urlErr;
+        found = await searchWithClaude(new URL(url).hostname + ' ' + url);
+        if (!found.type) found.type = inferType(found.name, found.desc);
+      }
+      found.sourceUrl = url;
+      aiQueue.push({ url, result: found, error: null });
+    } catch (err) {
+      aiQueue.push({ url, result: null, error: err.message });
+    }
+  }
+  showNextInQueue();
+}
+
+function showNextInQueue() {
+  while (aiQueueIndex < aiQueue.length && !aiQueue[aiQueueIndex].result) {
+    // show error for failed ones and skip
+    const { url, error } = aiQueue[aiQueueIndex];
+    showToast(`${new URL(url).hostname} 擷取失敗：${error || '未知錯誤'}`);
+    aiQueueIndex++;
+  }
+  if (aiQueueIndex >= aiQueue.length) {
+    goToAiPanel(1);
+    renderCards();
     return;
   }
-
-  document.getElementById('aiLoadingKeyword').textContent = new URL(url).hostname;
-  goToAiPanel(2);
-  setLoadStep(1);
-
-  try {
-    await delay(200);
-    setLoadStep(2);
-    let found;
-    try {
-      found = await searchWithUrl(url);
-      setLoadStep(3);
-      await delay(200);
-      if (!found.type) found.type = inferType(found.name, found.desc);
-    } catch (urlErr) {
-      // URL scraping failed — try Claude AI if API key available
-      if (!getAnthropicKey()) throw urlErr;
-      setLoadStep(4);
-      document.getElementById('aiLoadingKeyword').textContent = 'AI 搜尋中…';
-      found = await searchWithClaude(new URL(url).hostname + ' ' + url);
-      if (!found.type) found.type = inferType(found.name, found.desc);
-    }
-    found.sourceUrl = url;
-    aiFoundData = found;
-    showConfirmPanel(found, url);
-  } catch (err) {
-    showAiError('擷取失敗：' + (err.message || '請確認網址後再試'));
-  }
+  const { result } = aiQueue[aiQueueIndex];
+  aiFoundData = result;
+  showConfirmPanel(result, aiQueueIndex, aiQueue.length);
 }
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function showConfirmPanel(d, keyword) {
+function showConfirmPanel(d, idx, total) {
   goToAiPanel(3);
+
+  const isMulti = total > 1;
+  const counter = isMulti ? `<div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">品項 ${idx + 1} / ${total}</div>` : '';
 
   const imgSrc = d.imageUrl || '';
   const imgBlock = imgSrc
@@ -2061,8 +2600,9 @@ function showConfirmPanel(d, keyword) {
   ).join('') + `<option value="__custom__">＋ 自訂分類...</option>`;
 
   document.getElementById('aiConfirmContent').innerHTML = `
+    ${counter}
     <div style="margin-bottom:16px;font-size:13px;color:var(--text-muted)">
-      請確認以下資訊是否正確，空白欄位表示網頁未提供，可直接手動填入後儲存。
+      請確認以下資訊，空白欄位可手動填入後儲存。
     </div>
     <div class="ai-confirm-card">
       ${imgBlock}
@@ -2093,7 +2633,7 @@ function showConfirmPanel(d, keyword) {
         <div class="ai-confirm-row">
           <div class="ai-field-group">
             <div class="ai-field-label">顏色</div>
-            <input class="ai-field-input" id="aiFColor" value="${escHtml(d.color || '')}" placeholder="例：黑色、深灰">
+            <input class="ai-field-input" id="aiFColor" value="" placeholder="例：黑色、深灰">
           </div>
           <div class="ai-field-group">
             <div class="ai-field-label">材質</div>
@@ -2105,14 +2645,12 @@ function showConfirmPanel(d, keyword) {
           </div>
         </div>
         <div class="ai-confirm-row">
-          <div class="ai-field-group" style="grid-column:1/-1">
+          <div class="ai-field-group">
             <div class="ai-field-label">推出年份</div>
             <input class="ai-field-input" id="aiFYear" type="number" value="${d.year > 0 ? d.year : ''}" placeholder="年份">
           </div>
-        </div>
-        <div class="ai-confirm-row">
-          <div class="ai-field-group" style="grid-column:1/-1">
-            <div class="ai-field-label">價格（NT$）</div>
+          <div class="ai-field-group">
+            <div class="ai-field-label">價格（NT$）${d.priceOrig ? `<span style="font-size:11px;color:#888;margin-left:6px">原價 ${escHtml(d.priceOrig)}</span>` : ''}</div>
             <input class="ai-field-input" id="aiFPrice" type="number" value="${d.price > 0 ? d.price : ''}" placeholder="價格">
           </div>
         </div>
@@ -2120,11 +2658,14 @@ function showConfirmPanel(d, keyword) {
           <div class="ai-field-label">產品描述</div>
           <textarea class="ai-field-textarea" id="aiFDesc">${escHtml(d.desc || '')}</textarea>
         </div>
-        <div class="ai-source-note">
-          ℹ️ 資訊由 Claude AI 透過網路搜尋「${escHtml(keyword)}」整理，請核對後再儲存。價格為估算值，建議以官方售價為準。
-        </div>
       </div>
     </div>`;
+
+  // Update action buttons
+  const isLast = idx + 1 >= total;
+  document.getElementById('aiBtnSkip').style.display = isMulti ? '' : 'none';
+  document.getElementById('aiBtnSkip').textContent = isLast ? '略過並完成' : '略過';
+  document.getElementById('aiBtnSave').textContent = isLast ? '✓ 儲存並完成' : '✓ 儲存，下一個';
 }
 
 function showAiError(msg) {
@@ -2133,6 +2674,11 @@ function showAiError(msg) {
     <div class="ai-error-box">
       <strong>搜尋失敗</strong><br>${escHtml(msg)}
     </div>`;
+}
+
+function aiSkipCurrent() {
+  aiQueueIndex++;
+  showNextInQueue();
 }
 
 function confirmAiSave() {
@@ -2156,6 +2702,7 @@ function confirmAiSave() {
     size: (document.getElementById('aiFSize')?.value || '').trim(),
     type,
     price: (document.getElementById('aiFPrice')?.value || '').trim(),
+    priceOrig: aiFoundData?.priceOrig || '',
     desc: (document.getElementById('aiFDesc')?.value || '').trim(),
     image: null,
     imageUrl: aiFoundData?.imageUrl || '',
@@ -2165,9 +2712,22 @@ function confirmAiSave() {
 
   items.unshift(item);
   saveData();
-  closeAiModal();
-  renderCards();
-  showToast('已新增品項');
+  showToast('已新增：' + name);
+
+  aiQueueIndex++;
+  if (aiQueueIndex >= aiQueue.length) {
+    closeAiModal();
+    renderCards();
+    return;
+  }
+  showNextInQueue();
+}
+
+function formatPrice(item) {
+  if (!item.price) return '';
+  const ntd = `NT$ ${Number(item.price).toLocaleString()}`;
+  if (item.priceOrig) return `${item.priceOrig}（約 ${ntd}）`;
+  return ntd;
 }
 
 function escHtml(s) {
@@ -2175,18 +2735,19 @@ function escHtml(s) {
 }
 
 // ─── Modal close helpers ─────────────────────────────
-['detailModal','settingsModal'].forEach(id => {
+['detailModal','settingsModal','driveModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target.id === id) {
       if (id === 'detailModal') closeDetailModal();
       else if (id === 'settingsModal') closeSettings();
+      else if (id === 'driveModal') closeDriveModal();
     }
   });
 });
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    closeDetailModal(); closeSettings();
+    closeDetailModal(); closeSettings(); closeDriveModal();
   }
 });
 
@@ -2275,9 +2836,16 @@ function showToast(msg) {
 }
 
 // ─── Init ────────────────────────────────────────────
-loadData();
-rebuildTypeSelects();
-renderCards();
+const _viewFileId = new URLSearchParams(location.search).get('view');
+if (_viewFileId) {
+  // Read-only shared catalog mode
+  rebuildTypeSelects();
+  loadSharedCatalog(_viewFileId);
+} else {
+  loadData();
+  rebuildTypeSelects();
+  renderCards();
+}
 </script>
 </body>
 </html>
