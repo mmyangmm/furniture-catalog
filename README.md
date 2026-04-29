@@ -17,20 +17,6 @@
 
 ---
 
-### 這個專案是為了解決什麼問題？
-
-在規劃居家佈置時，你是否有過這樣的經驗：
-
-- 在 IKEA、無印良品、各大品牌官網東看西看，喜歡的東西卻只能「複製網址貼到 Notes」
-- 收藏在瀏覽器書籤的產品頁，過了幾個月卻找不到、或下架了
-- 想比較不同品牌的沙發價格，卻得一個個打開分頁重新確認
-- 去實體店看到喜歡的傢俱，想拍照記錄卻散落在相機膠卷裡，沒有品牌、尺寸、價格等資訊
-- 想和家人討論要買哪張桌子，但資訊零散、難以整理成一覽表
-
-**傢俱目錄**就是為了解決這些日常痛點而生。它讓你把「看到喜歡的傢俱」這個動作，變成一個有系統的收藏與比較過程。
-
----
-
 ### 你的目錄，你的風格主張
 
 **傢俱目錄**不只是一個工具，它是你居家風格的私人檔案庫。
@@ -40,25 +26,6 @@
 - **顏色 × 材質追蹤**：獨立的顏色與材質欄位，讓你一眼掌握目錄裡的色調傾向——原來你一直在收藏暖棕色系的木質傢俱
 - **年份紀錄**：知道哪些是當代設計、哪些是經典款，建立跨越時代的風格觀點
 - **圖片優先**：卡片式版面以圖片為主角，視覺直觀——因為傢俱的風格感受，眼睛說了算
-
----
-
-### 為什麼要用這個，而不是其他工具？
-
-#### 和記事本、書籤相比
-普通書籤只存網址，打開後還要重新閱讀整頁找資訊。**傢俱目錄**把你需要的欄位（品名、品牌、顏色、材質、尺寸、價格）一次整理好，視覺化呈現，一目瞭然。
-
-#### 和試算表相比
-Excel / Google Sheets 需要手動輸入每格，圖片處理麻煩，手機瀏覽體驗差。**傢俱目錄**只要貼入產品網址，系統自動擷取資訊；圖片直接顯示在卡片上，支援手機滑動瀏覽。
-
-#### 和 Pinterest、Instagram 收藏相比
-社群平台的收藏是「靈感板」，沒有價格、尺寸、品牌等結構化資料，也無法做比較或篩選。**傢俱目錄**是有欄位、可搜尋、可排序的個人資料庫，靈感與理性兼顧。
-
-#### 為什麼不需要帳號、不需要伺服器？
-- **零設定**：下載即用，不需要申請帳號、不需要訂閱費
-- **隱私安全**：所有資料存在自己的瀏覽器裡，不會上傳到任何雲端
-- **不依賴服務存活**：不怕服務關閉、帳號被停用或付費牆
-- **完全離線可用**：出門在外沒網路，資料仍然看得到
 
 ---
 
@@ -142,6 +109,18 @@ open index.html
 
 無需 npm、無需伺服器，所有程式碼皆內嵌於單一 `index.html` 檔案。
 
+### 這個專案是為了解決什麼問題？
+
+在規劃居家佈置時，你是否有過這樣的經驗：
+
+- 在 IKEA、無印良品、各大品牌官網東看西看，喜歡的東西卻只能「複製網址貼到 Notes」
+- 收藏在瀏覽器書籤的產品頁，過了幾個月卻找不到、或下架了
+- 想比較不同品牌的沙發價格，卻得一個個打開分頁重新確認
+- 去實體店看到喜歡的傢俱，想拍照記錄卻散落在相機膠卷裡，沒有品牌、尺寸、價格等資訊
+- 想和家人討論要買哪張桌子，但資訊零散、難以整理成一覽表
+
+**傢俱目錄**就是為了解決這些日常痛點而生。它讓你把「看到喜歡的傢俱」這個動作，變成一個有系統的收藏與比較過程。
+
 ### 注意事項
 
 - 資料儲存於瀏覽器 localStorage，清除瀏覽器資料前請先匯出備份
@@ -162,20 +141,6 @@ Everyone's idea of "home" is different. Some gravitate toward Scandinavian minim
 
 ---
 
-### What problem does this solve?
-
-When planning a home interior, you've probably experienced this:
-
-- Browsing IKEA, Muji, or brand websites and saving links you like — only to paste them into Notes with zero context
-- Bookmarking product pages that disappear or go out of stock months later
-- Wanting to compare sofa prices across brands, but having to open every tab again
-- Taking photos in a furniture store with no record of the brand, dimensions, or price
-- Trying to discuss furniture options with a partner, but your "research" is scattered across browser tabs, screenshots, and chat messages
-
-**Furniture Catalog** was built to solve exactly these frustrations. It turns the act of "finding furniture you like" into an organized, searchable, visual database.
-
----
-
 ### Your catalog. Your style.
 
 **Furniture Catalog** is more than a utility — it's a private archive of your design sensibility.
@@ -185,25 +150,6 @@ When planning a home interior, you've probably experienced this:
 - **Color × Material tracking**: Dedicated fields for color and material let you spot patterns in your own taste — maybe you've been gravitating toward warm-toned wood all along
 - **Year field**: Know which pieces are contemporary designs and which are timeless classics — build a style perspective that spans eras
 - **Image-first layout**: The card grid puts photos front and center, because when it comes to furniture aesthetics, your eyes know first
-
----
-
-### Why use this instead of other tools?
-
-#### vs. Bookmarks or Notes
-Regular bookmarks only save a URL — you still have to re-read the whole page to find the info you need. **Furniture Catalog** extracts the fields you actually care about (name, brand, color, material, size, price) and displays them in a clean card layout.
-
-#### vs. Spreadsheets (Excel / Google Sheets)
-Spreadsheets require manual data entry for every cell, image handling is cumbersome, and the mobile experience is poor. **Furniture Catalog** lets you paste a URL and auto-imports the data; images appear directly on cards and the layout works great on mobile.
-
-#### vs. Pinterest or Instagram Collections
-Social platforms are great for mood boards, but they lack structured data — no price, no dimensions, no brand filter. **Furniture Catalog** is a queryable personal database: inspiration and practicality in one place.
-
-#### Why no account, no server?
-- **Zero setup**: Download and open — no sign-up, no subscription
-- **Privacy first**: All data stays in your own browser, never uploaded to any cloud
-- **No service dependency**: No risk of the service shutting down, account suspension, or paywalls
-- **Fully offline**: Your catalog is always available, even without an internet connection
 
 ---
 
@@ -286,6 +232,18 @@ open index.html
 ```
 
 No npm, no server needed. Everything is self-contained in a single `index.html` file.
+
+### What problem does this solve?
+
+When planning a home interior, you've probably experienced this:
+
+- Browsing IKEA, Muji, or brand websites and saving links you like — only to paste them into Notes with zero context
+- Bookmarking product pages that disappear or go out of stock months later
+- Wanting to compare sofa prices across brands, but having to open every tab again
+- Taking photos in a furniture store with no record of the brand, dimensions, or price
+- Trying to discuss furniture options with a partner, but your "research" is scattered across browser tabs, screenshots, and chat messages
+
+**Furniture Catalog** was built to solve exactly these frustrations. It turns the act of "finding furniture you like" into an organized, searchable, visual database.
 
 ### Notes & Limitations
 
