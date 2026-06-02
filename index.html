@@ -3,8 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#8b6f47">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="傢俱目錄">
 <title>傢俱目錄</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='14' width='5' height='12' rx='2.5' fill='%238b6f47'/%3E%3Crect x='23' y='14' width='5' height='12' rx='2.5' fill='%238b6f47'/%3E%3Crect x='7' y='7' width='18' height='11' rx='3' fill='%23a8834f'/%3E%3Crect x='7' y='17' width='18' height='7' rx='2' fill='%23c4996a'/%3E%3Crect x='9' y='24' width='3' height='5' rx='1' fill='%236d5435'/%3E%3Crect x='20' y='24' width='3' height='5' rx='1' fill='%236d5435'/%3E%3C/svg%3E">
 <script src="https://accounts.google.com/gsi/client" async></script>
+<script src="./firebase-config.js?v=2"></script>
 <style>
   :root {
     --bg: #f7f5f2;
@@ -840,6 +848,18 @@
   @keyframes drive-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .drive-syncing-icon { display:inline-block; animation: drive-spin 1.5s linear infinite; }
 
+  /* Firebase button/modal */
+  .cloud-btn { font-size: 13px; padding: 7px 12px; transition: all 0.2s; }
+  .cloud-btn.cloud-connected { color: var(--green); border-color: var(--green); background: var(--green-light); }
+  .cloud-btn.cloud-syncing { color: #805ad5; border-color: #b794f4; }
+  .cloud-status-row { display:flex; align-items:center; gap:10px; padding:14px 0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .cloud-avatar { width:38px; height:38px; border-radius:50%; background:var(--accent-light); color:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:800; overflow:hidden; flex-shrink:0; }
+  .cloud-avatar img { width:100%; height:100%; object-fit:cover; }
+  .cloud-status-name { font-weight:600; font-size:14px; }
+  .cloud-status-sub { font-size:12px; color:var(--text-muted); margin-top:2px; line-height:1.45; }
+  .cloud-actions { display:flex; flex-direction:column; gap:8px; }
+  .cloud-actions .btn { justify-content:center; }
+
   /* Read-only view mode */
   .view-mode .header-actions .btn-ai,
   .view-mode .header-actions .btn-primary,
@@ -893,7 +913,7 @@
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn btn-ghost drive-btn" id="driveSyncBtn" onclick="openDriveModal()" title="Google Drive 同步">☁ Drive</button>
+    <button class="btn btn-ghost cloud-btn" id="cloudSyncBtn" type="button" onclick="openCloudModal(event)" title="Firebase 同步">☁ Firebase</button>
     <button class="btn btn-ai" onclick="openAiSearchModal()">
       🔗 <span>網址新增</span>
     </button>
@@ -1123,6 +1143,30 @@
   </div>
 </div>
 
+<!-- Firebase Cloud Modal -->
+<div class="modal-overlay" id="cloudModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">☁ Firebase 同步</div>
+      <button class="modal-close" onclick="closeCloudModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cloud-status-row">
+        <div class="cloud-avatar" id="cloudAvatar">☁</div>
+        <div>
+          <div class="cloud-status-name" id="cloudTitle">準備同步</div>
+          <div class="cloud-status-sub" id="cloudStatus">Firebase 準備中</div>
+        </div>
+      </div>
+      <div class="cloud-actions">
+        <button class="btn btn-primary" id="cloudSignIn" type="button" onclick="signInWithGoogle()">使用 Google 登入</button>
+        <button class="btn btn-ghost" id="cloudSyncNow" type="button" onclick="performCloudSync('manual', true)">↻ 立即同步</button>
+        <button class="btn btn-ghost" id="cloudSignOut" type="button" style="color:#c53030;border-color:#fed7d7" onclick="signOutGoogle()">登出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
   <div class="modal">
@@ -1240,6 +1284,7 @@
 const STORAGE_KEY = 'furniture_catalog_v1';
 const CATEGORIES = ['沙發','椅子','桌子','床架','層架','收納','燈具','地毯','戶外傢俱','裝飾品'];
 const CUSTOM_CATS_KEY = 'furniture_custom_categories';
+const FIREBASE_SDK_VERSION = '12.13.0';
 
 let items = [];
 let customCategories = [];
@@ -1247,6 +1292,17 @@ let activeCategory = 'all';
 let activeBrand = 'all';
 let editingId = null;
 let pendingImageData = null;
+let firebaseInitializing = true;
+let firebaseConfigured = false;
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+let firebaseModules = null;
+let firebaseUser = null;
+let cloudSyncTimer = null;
+let cloudSyncInFlight = false;
+let cloudMergeInProgress = false;
+let cloudStatusMessage = '';
 
 function allCategories() {
   const custom = customCategories.filter(c => !CATEGORIES.includes(c) && c !== '其他');
@@ -1261,8 +1317,12 @@ function loadData() {
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   scheduleDriveSave();
+  queueCloudSync('items');
 }
-function saveCustomCategories() { localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(customCategories)); }
+function saveCustomCategories() {
+  localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(customCategories));
+  queueCloudSync('categories');
+}
 
 function addCustomCategory(name) {
   if (!name || allCategories().includes(name)) return;
@@ -1514,6 +1574,7 @@ function saveItem() {
     imageUrl: existing?.imageUrl || '',
     sourceUrl: existing?.sourceUrl || '',
     createdAt: existing?.createdAt || Date.now(),
+    updatedAt: Date.now(),
   };
   if (editingId) {
     const idx = items.findIndex(i => i.id === editingId);
@@ -1540,7 +1601,7 @@ function openDetail(id) {
   const price = formatPrice(item) || '未提供';
   const imgSrc = item.image || item.imageUrl;
   document.getElementById('detailBody').innerHTML = `
-    ${imgSrc ? `<img class="detail-img" src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none'">` : ''}
+    ${imgSrc ? `<img class="detail-img" src="${imgSrc}" alt="${item.name}" onerror="this.style.display='none';document.getElementById('refetchBtn_${item.id}')?.style.setProperty('display','inline-flex')">` : ''}
     <div class="detail-name">${item.name || '未命名'}</div>
     <div class="detail-brand">${item.brand || ''}</div>
     <div class="detail-price">${price}</div>
@@ -1555,6 +1616,7 @@ function openDetail(id) {
     ${item.desc ? `<div class="detail-desc">${item.desc}</div>` : ''}
     ${item.sourceUrl ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">來源：<a href="${item.sourceUrl}" target="_blank" style="color:var(--accent);word-break:break-all">${item.sourceUrl}</a></div>` : ''}
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      ${item.sourceUrl ? `<button id="refetchBtn_${item.id}" class="btn btn-ghost" style="font-size:12px;${imgSrc ? 'display:none' : ''}" onclick="refetchImage('${item.id}')">🔄 重新取得封面圖片</button>` : ''}
       <button class="btn btn-ghost" onclick="closeDetailModal();openEditModal('${item.id}')">✏️ 編輯</button>
       <button class="btn btn-ghost" style="color:#e53e3e;border-color:#fed7d7" onclick="closeDetailModal();deleteItem('${item.id}')">🗑 刪除</button>
     </div>
@@ -1567,6 +1629,31 @@ function openDetail(id) {
 }
 
 function closeDetailModal() { document.getElementById('detailModal').classList.remove('open'); }
+
+async function refetchImage(id) {
+  const item = items.find(i => i.id === id);
+  if (!item?.sourceUrl) return;
+  showToast('正在重新取得圖片…');
+  // Try Microlink first (renders JS)
+  const ml = await fetchMicrolinkData(item.sourceUrl);
+  if (ml?.image?.url) {
+    item.imageUrl = ml.image.url;
+    item.updatedAt = Date.now();
+    saveData(); closeDetailModal(); openDetail(id); renderCards();
+    showToast('✓ 封面圖片已更新');
+    return;
+  }
+  // Fallback: Jina.ai
+  const jinaImgs = await fetchJinaImages(item.sourceUrl);
+  if (jinaImgs[0]) {
+    item.imageUrl = jinaImgs[0];
+    item.updatedAt = Date.now();
+    saveData(); closeDetailModal(); openDetail(id); renderCards();
+    showToast('✓ 封面圖片已更新');
+    return;
+  }
+  showToast('找不到圖片，請在編輯中手動上傳');
+}
 
 function togglePhotos(id) {
   const panel = document.getElementById(`photosPanel_${id}`);
@@ -1626,7 +1713,7 @@ async function loadProductPhotos(id, panel, btn) {
       } catch {}
     }
 
-    // 3. Product gallery images
+    // 3. Product gallery images (WooCommerce & generic)
     for (const el of doc.querySelectorAll(
       '.woocommerce-product-gallery__image img, .product-gallery img, [class*="gallery"] img, [class*="product-image"] img'
     )) {
@@ -1636,11 +1723,35 @@ async function loadProductPhotos(id, panel, btn) {
       }
     }
 
+    // 3.5 Lazy-loaded images & <picture><source> (common on modern sites like flos.com)
+    for (const el of doc.querySelectorAll('img[data-src], img[data-lazy-src], img[data-original], img[data-lazy]')) {
+      const u = el.getAttribute('data-src') || el.getAttribute('data-lazy-src')
+              || el.getAttribute('data-original') || el.getAttribute('data-lazy') || '';
+      if (u && /^https?:\/\//.test(u) && !seen.has(u) && !/placeholder|logo|icon|favicon/i.test(u)) {
+        seen.add(u); imgs.push(u);
+      }
+    }
+    for (const el of doc.querySelectorAll('source[srcset], source[data-srcset]')) {
+      const srcset = el.getAttribute('srcset') || el.getAttribute('data-srcset') || '';
+      const first = srcset.split(',')[0].trim().split(/\s+/)[0];
+      if (first && /^https?:\/\//.test(first) && !seen.has(first) && !/placeholder|logo|favicon/i.test(first)) {
+        seen.add(first); imgs.push(first);
+      }
+    }
+
     // 4. og:image as last fallback
     const og = doc.querySelector('meta[property="og:image"]')?.getAttribute('content');
     if (og && !seen.has(og)) { seen.add(og); imgs.push(og); }
 
     const limited = imgs.slice(0, 10);
+
+    if (!limited.length) {
+      // Fallback: Jina.ai renders JS — useful for flos.com and similar
+      panel.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:8px 0">正在嘗試備援取圖（Jina.ai）…</div>`;
+      const jinaImgs = await fetchJinaImages(item.sourceUrl);
+      for (const u of jinaImgs) { if (!seen.has(u)) { seen.add(u); imgs.push(u); } }
+      limited.push(...imgs.slice(0, 10));
+    }
 
     if (!limited.length) {
       panel.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:8px 0">未在來源頁面找到產品照片。</div>`;
@@ -1692,12 +1803,23 @@ function openSettings() {
 
 function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
 
+function createBackupPayload() {
+  return {
+    app: '傢俱目錄 PWA',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items,
+    customCategories,
+  };
+}
+
 function exportData() {
-  const blob = new Blob([JSON.stringify(items, null, 2)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify(createBackupPayload(), null, 2)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `傢俱目錄_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function clearAllData() {
@@ -1711,23 +1833,82 @@ function importData(input) {
   input.value = ''; // reset so same file can be re-imported
   const reader = new FileReader();
   reader.onload = e => {
-    let imported;
-    try { imported = JSON.parse(e.target.result); } catch { showToast('檔案格式錯誤，請選擇有效的 JSON 檔案'); return; }
-    const list = Array.isArray(imported) ? imported : imported.items;
-    if (!Array.isArray(list) || !list.length) { showToast('找不到品項資料'); return; }
-    // Merge: imported items overwrite existing ones with same id; new items prepended
-    const existingMap = new Map(items.map(i => [i.id, i]));
-    let added = 0, updated = 0;
-    for (const item of list) {
-      if (!item.id || !item.name) continue;
-      existingMap.has(item.id) ? updated++ : added++;
-      existingMap.set(item.id, item);
+    try {
+      const result = mergeBackupIntoState(JSON.parse(e.target.result));
+      renderCards();
+      showToast(`匯入完成：新增 ${result.added} 件，更新 ${result.updated} 件`);
+    } catch {
+      showToast('檔案格式錯誤，請選擇有效的 JSON 檔案');
     }
-    items = [...existingMap.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    saveData(); renderCards();
-    showToast(`匯入完成：新增 ${added} 件，更新 ${updated} 件`);
   };
   reader.readAsText(file);
+}
+
+function mergeBackupIntoState(parsed, options = {}) {
+  const { sync = true, preferImported = true } = options;
+  const list = Array.isArray(parsed) ? parsed : parsed?.items;
+  if (!Array.isArray(list)) throw new Error('Invalid backup');
+
+  const existingMap = new Map(items.map(i => [i.id, i]));
+  let added = 0, updated = 0;
+  for (const rawItem of list) {
+    const item = normalizeFurnitureItem(rawItem);
+    if (!item) continue;
+    const existing = existingMap.get(item.id);
+    if (existing) {
+      updated++;
+      if (preferImported || itemTimestamp(item) >= itemTimestamp(existing)) existingMap.set(item.id, item);
+    } else {
+      added++;
+      existingMap.set(item.id, item);
+    }
+  }
+  items = [...existingMap.values()].sort((a, b) => itemTimestamp(b) - itemTimestamp(a));
+
+  if (!Array.isArray(parsed) && Array.isArray(parsed?.customCategories)) {
+    const merged = new Set(customCategories);
+    parsed.customCategories.forEach(cat => {
+      const name = String(cat || '').trim();
+      if (name && !CATEGORIES.includes(name) && name !== '其他') merged.add(name);
+    });
+    customCategories = [...merged];
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(customCategories));
+  rebuildTypeSelects();
+  if (sync) queueCloudSync('import');
+  return { added, updated, items: list.length };
+}
+
+function normalizeFurnitureItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const id = String(item.id || '').trim();
+  const name = String(item.name || '').trim();
+  if (!id || !name) return null;
+  return {
+    ...item,
+    id,
+    name,
+    brand: String(item.brand || '').trim(),
+    year: String(item.year || '').trim(),
+    color: String(item.color || '').trim(),
+    material: String(item.material || '').trim(),
+    size: String(item.size || '').trim(),
+    type: String(item.type || '').trim(),
+    price: String(item.price || '').trim(),
+    priceOrig: String(item.priceOrig || '').trim(),
+    desc: String(item.desc || '').trim(),
+    image: item.image || null,
+    imageUrl: String(item.imageUrl || '').trim(),
+    sourceUrl: String(item.sourceUrl || '').trim(),
+    createdAt: Number(item.createdAt) || Date.now(),
+    updatedAt: Number(item.updatedAt) || Number(item.createdAt) || Date.now(),
+  };
+}
+
+function itemTimestamp(item) {
+  return Number(item?.updatedAt || item?.createdAt || 0);
 }
 
 // ─── Google Drive Sync ───────────────────────────────
@@ -2001,6 +2182,264 @@ async function loadSharedCatalog(fileId) {
   }
 }
 
+// ─── Firebase Sync ──────────────────────────────────
+function openCloudModal(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  renderCloudControls();
+  window.requestAnimationFrame(() => document.getElementById('cloudModal').classList.add('open'));
+}
+
+function closeCloudModal() {
+  document.getElementById('cloudModal').classList.remove('open');
+}
+
+function renderCloudControls() {
+  const signedIn = Boolean(firebaseUser);
+  const configured = firebaseConfigured;
+  const btn = document.getElementById('cloudSyncBtn');
+  const title = document.getElementById('cloudTitle');
+  const status = document.getElementById('cloudStatus');
+  const avatar = document.getElementById('cloudAvatar');
+  const signIn = document.getElementById('cloudSignIn');
+  const signOut = document.getElementById('cloudSignOut');
+  const syncNow = document.getElementById('cloudSyncNow');
+
+  if (btn) {
+    btn.classList.toggle('cloud-connected', signedIn && !cloudSyncInFlight);
+    btn.classList.toggle('cloud-syncing', cloudSyncInFlight);
+    btn.textContent = cloudSyncInFlight ? '↻ 同步中' : signedIn ? '✓ Firebase' : '☁ Firebase';
+  }
+  if (!title || !status || !avatar || !signIn || !signOut || !syncNow) return;
+
+  if (signedIn) {
+    const name = firebaseUser.displayName || 'Google 使用者';
+    title.textContent = name;
+    avatar.innerHTML = firebaseUser.photoURL
+      ? `<img src="${escHtml(firebaseUser.photoURL)}" alt="">`
+      : escHtml(name.slice(0, 1).toUpperCase());
+  } else {
+    title.textContent = firebaseInitializing ? 'Firebase 準備中' : '尚未登入';
+    avatar.textContent = '☁';
+  }
+
+  if (cloudSyncInFlight) {
+    status.textContent = '同步中';
+  } else if (cloudStatusMessage) {
+    status.textContent = cloudStatusMessage;
+  } else if (firebaseInitializing) {
+    status.textContent = 'Firebase 準備中';
+  } else if (!configured) {
+    status.textContent = 'Firebase 尚未設定';
+  } else if (!signedIn) {
+    status.textContent = '登入後會透過 Firebase Authentication 與 Firestore 合併並自動同步本機資料。';
+  } else {
+    status.textContent = firebaseUser.email || '已登入，等待同步';
+  }
+
+  signIn.style.display = signedIn ? 'none' : '';
+  signIn.disabled = firebaseInitializing || !configured || cloudSyncInFlight;
+  signOut.style.display = signedIn ? '' : 'none';
+  signOut.disabled = cloudSyncInFlight;
+  syncNow.disabled = !configured || !signedIn || cloudSyncInFlight;
+}
+
+function queueCloudSync(reason) {
+  if (cloudMergeInProgress || !firebaseConfigured || !firebaseUser || !firebaseDb) {
+    renderCloudControls();
+    return;
+  }
+  if (cloudSyncTimer) window.clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(() => performCloudSync(reason, false), 900);
+}
+
+async function performCloudSync(reason, manual) {
+  if (!firebaseConfigured) {
+    cloudStatusMessage = 'Firebase 尚未設定';
+    renderCloudControls();
+    return;
+  }
+  if (!firebaseUser) {
+    cloudStatusMessage = '請先使用 Google 登入';
+    renderCloudControls();
+    if (manual) await signInWithGoogle();
+    return;
+  }
+  if (cloudSyncInFlight) return;
+
+  cloudSyncInFlight = true;
+  cloudStatusMessage = '同步中';
+  renderCloudControls();
+  try {
+    await firebaseModules.setDoc(firebaseSyncRef(), {
+      ...createBackupPayload(),
+      reason,
+      user: firebaseUserProfile(firebaseUser),
+      clientUpdatedAt: new Date().toISOString(),
+      updatedAt: firebaseModules.serverTimestamp(),
+    });
+    cloudStatusMessage = `已同步 ${timeShort(new Date())}`;
+  } catch (error) {
+    cloudStatusMessage = firestoreErrorText(error);
+  } finally {
+    cloudSyncInFlight = false;
+    renderCloudControls();
+  }
+}
+
+async function initFirebaseSync() {
+  const config = firebaseConfig();
+  firebaseConfigured = isValidFirebaseConfig(config);
+  if (!firebaseConfigured) {
+    firebaseInitializing = false;
+    renderCloudControls();
+    return;
+  }
+
+  try {
+    const [appModule, authModule, firestoreModule] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`),
+    ]);
+    firebaseModules = {
+      GoogleAuthProvider: authModule.GoogleAuthProvider,
+      browserLocalPersistence: authModule.browserLocalPersistence,
+      doc: firestoreModule.doc,
+      getDoc: firestoreModule.getDoc,
+      serverTimestamp: firestoreModule.serverTimestamp,
+      setDoc: firestoreModule.setDoc,
+      signInWithPopup: authModule.signInWithPopup,
+      signOut: authModule.signOut,
+    };
+    firebaseApp = appModule.initializeApp(config, 'furniture-catalog');
+    firebaseAuth = authModule.getAuth(firebaseApp);
+    firebaseDb = firestoreModule.getFirestore(firebaseApp);
+    await authModule.setPersistence(firebaseAuth, authModule.browserLocalPersistence);
+    authModule.onAuthStateChanged(firebaseAuth, (user) => {
+      firebaseUser = user;
+      cloudStatusMessage = user ? 'Google 已登入' : '';
+      renderCloudControls();
+      if (user) mergeCloudBackupAfterLogin();
+    });
+  } catch {
+    firebaseConfigured = false;
+    cloudStatusMessage = 'Firebase 載入失敗';
+  } finally {
+    firebaseInitializing = false;
+    renderCloudControls();
+  }
+}
+
+async function signInWithGoogle() {
+  if (!firebaseConfigured || !firebaseAuth || !firebaseModules) {
+    cloudStatusMessage = 'Firebase 尚未設定';
+    renderCloudControls();
+    return;
+  }
+  if (location.protocol === 'file:') {
+    cloudStatusMessage = '請從 PWA 網址開啟，Firebase 登入不支援本機 HTML';
+    renderCloudControls();
+    return;
+  }
+  const provider = new firebaseModules.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  cloudStatusMessage = '開啟 Google 登入視窗';
+  renderCloudControls();
+  try {
+    await firebaseModules.signInWithPopup(firebaseAuth, provider);
+  } catch (error) {
+    cloudStatusMessage = firebaseAuthErrorText(error);
+    renderCloudControls();
+  }
+}
+
+async function signOutGoogle() {
+  if (!firebaseAuth || !firebaseModules) return;
+  await firebaseModules.signOut(firebaseAuth);
+  firebaseUser = null;
+  cloudStatusMessage = '已登出';
+  renderCloudControls();
+}
+
+async function mergeCloudBackupAfterLogin() {
+  if (!firebaseUser || !firebaseDb || !firebaseModules || cloudSyncInFlight) return;
+  cloudSyncInFlight = true;
+  cloudMergeInProgress = true;
+  cloudStatusMessage = '讀取雲端資料';
+  renderCloudControls();
+  let shouldSync = true;
+  try {
+    const snapshot = await firebaseModules.getDoc(firebaseSyncRef());
+    if (snapshot.exists()) {
+      const result = mergeBackupIntoState(snapshot.data(), { sync: false, preferImported: false });
+      cloudStatusMessage = `已合併雲端資料：${result.items} 件`;
+      renderCards();
+    } else {
+      cloudStatusMessage = '已登入，建立雲端備份';
+    }
+  } catch (error) {
+    cloudStatusMessage = `讀取雲端失敗：${firestoreErrorText(error)}`;
+    shouldSync = false;
+  } finally {
+    cloudMergeInProgress = false;
+    cloudSyncInFlight = false;
+    renderCloudControls();
+  }
+  if (shouldSync) queueCloudSync('login');
+}
+
+function firebaseSyncRef() {
+  return firebaseModules.doc(firebaseDb, 'users', firebaseUser.uid, 'backups', 'furniture-catalog');
+}
+
+function firebaseConfig() {
+  return window.FURNITURE_FIREBASE_CONFIG || window.I_EXPENSE_FIREBASE_CONFIG || {};
+}
+
+function isValidFirebaseConfig(config) {
+  return Boolean(config && config.apiKey && config.authDomain && config.projectId && config.appId);
+}
+
+function firebaseUserProfile(user) {
+  return {
+    uid: user.uid,
+    email: user.email || '',
+    displayName: user.displayName || '',
+    photoURL: user.photoURL || '',
+  };
+}
+
+function firebaseAuthErrorText(error) {
+  const code = error?.code || '';
+  if (code === 'auth/unauthorized-domain') return 'Firebase 未允許此網域，請在 Firebase Authentication 加入目前網域';
+  if (code === 'auth/popup-blocked') return '登入視窗被瀏覽器阻擋，請允許彈出視窗後重試';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return 'Google 登入尚未完成';
+  if (code === 'auth/network-request-failed') return '網路連線失敗，請稍後再試';
+  return code ? `Google 登入失敗：${code}` : 'Google 登入失敗';
+}
+
+function firestoreErrorText(error) {
+  const code = error?.code || '';
+  if (code === 'permission-denied') return 'Firestore 權限不足，請確認 rules 允許目前登入帳號寫入';
+  if (code === 'not-found') return 'Firestore 資料庫尚未建立，請先在 Firebase Console 建立 Cloud Firestore';
+  if (code === 'failed-precondition') return 'Firestore 尚未完成設定，請確認資料庫與 rules';
+  if (code === 'unavailable') return 'Firestore 暫時無法連線，請稍後再試';
+  if (code === 'unauthenticated') return 'Google 登入狀態已失效，請重新登入';
+  return code ? `Firestore 同步失敗：${code}` : 'Firestore 同步失敗';
+}
+
+function timeShort(date) {
+  return new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
 // ─── AI Smart Search ─────────────────────────────────
 const AI_URL_COUNT = 3;
 let aiFoundData = null;
@@ -2087,6 +2526,38 @@ function inferType(name, fallbackText) {
 const FX = { USD: 32, EUR: 35, GBP: 41, JPY: 0.22, HKD: 4.1, SGD: 24, CNY: 4.4, AUD: 21, CAD: 23 };
 const CURRENCY_SYMBOLS = { USD: 'US$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$', SGD: 'S$', CNY: 'CN¥', AUD: 'A$', CAD: 'CA$' };
 
+// ── Microlink: structured data with JS rendering ─────────────────────
+async function fetchMicrolinkData(url) {
+  try {
+    const r = await fetch(
+      `https://api.microlink.io/?url=${encodeURIComponent(url)}&timeout=10000`,
+      { signal: AbortSignal.timeout(14000) }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.status === 'success' ? d.data : null;
+  } catch { return null; }
+}
+
+// ── Jina Reader: JS-rendered image list ──────────────────────────────
+// NOTE: Jina returns images as {url: caption} object, NOT an array
+async function fetchJinaImages(url) {
+  try {
+    const r = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' },
+      signal: AbortSignal.timeout(18000)
+    });
+    if (!r.ok) return [];
+    const d = await r.json();
+    const raw = d.data?.images;
+    let urls;
+    if (!raw) urls = [];
+    else if (Array.isArray(raw)) urls = raw.map(img => img.url || img.src || '');
+    else urls = Object.keys(raw); // standard format: { url: altCaption }
+    return urls.filter(u => u && /^https?:\/\//.test(u) && !/placeholder|logo|icon|favicon|sprite|tracking/i.test(u));
+  } catch { return []; }
+}
+
 // ── URL-based product page scraper ───────────────────────────────────
 async function fetchViaProxy(url) {
   const enc = encodeURIComponent(url);
@@ -2122,6 +2593,26 @@ async function searchWithUrl(url) {
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
+
+  // ── SPA detection: proxy returns shell HTML for JS-heavy sites (e.g. flos.com / Next.js) ──
+  // If body text is nearly empty, delegate immediately to Microlink which renders JS
+  const bodyLen = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim().length;
+  if (bodyLen < 300) {
+    const ml = await fetchMicrolinkData(url);
+    if (ml) {
+      const title = (ml.title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+      return {
+        name: title,
+        brand: (ml.publisher || '').trim().slice(0, 80),
+        year: 0, color: '', material: '', size: '',
+        type: inferType(title, ml.description || ''),
+        price: 0, priceOrig: '',
+        desc: (ml.description || '').trim().slice(0, 250),
+        imageUrl: ml.image?.url || '',
+      };
+    }
+    // Microlink also failed → let HTML parsing continue with what little we have
+  }
 
   // ── Text cleanup ──────────────────────────────────────────────────────
   // Collapse whitespace, remove zero-width chars, trim punctuation noise
@@ -2354,6 +2845,12 @@ async function searchWithUrl(url) {
     const sym = CURRENCY_SYMBOLS[currency] || currency;
     priceOrig = `${sym} ${price.toLocaleString()}`;
     price = Math.round(price * FX[currency]);
+  }
+
+  // If still no image, try Microlink (renders JS — helps sites like flos.com)
+  if (!rawImage) {
+    const ml = await fetchMicrolinkData(url);
+    if (ml?.image?.url) rawImage = ml.image.url;
   }
 
   return {
@@ -2708,6 +3205,7 @@ function confirmAiSave() {
     imageUrl: aiFoundData?.imageUrl || '',
     sourceUrl: aiFoundData?.sourceUrl || '',
     createdAt: Date.now(),
+    updatedAt: Date.now(),
   };
 
   items.unshift(item);
@@ -2735,19 +3233,20 @@ function escHtml(s) {
 }
 
 // ─── Modal close helpers ─────────────────────────────
-['detailModal','settingsModal','driveModal'].forEach(id => {
+['detailModal','settingsModal','driveModal','cloudModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target.id === id) {
       if (id === 'detailModal') closeDetailModal();
       else if (id === 'settingsModal') closeSettings();
       else if (id === 'driveModal') closeDriveModal();
+      else if (id === 'cloudModal') closeCloudModal();
     }
   });
 });
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    closeDetailModal(); closeSettings(); closeDriveModal();
+    closeDetailModal(); closeSettings(); closeDriveModal(); closeCloudModal();
   }
 });
 
@@ -2845,6 +3344,9 @@ if (_viewFileId) {
   loadData();
   rebuildTypeSelects();
   renderCards();
+  renderCloudControls();
+  registerServiceWorker();
+  initFirebaseSync();
 }
 </script>
 </body>
